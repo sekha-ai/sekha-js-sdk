@@ -21,6 +21,14 @@
   },
   "keywords": ["ai", "memory", "sekha", "typescript"],
   "license": "AGPL-3.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sekha-ai/sekha-js-sdk.git"
+  },
+  "bugs": {
+    "url": "https://github.com/sekha-ai/sekha-js-sdk/issues"
+  },
+  "homepage": "https://github.com/sekha-ai/sekha-js-sdk#readme"
   "devDependencies": {
     "@types/jest": "^29.5.0",
     "@types/node": "^20.0.0",
