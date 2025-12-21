@@ -2,22 +2,28 @@ name: JavaScript SDK CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, develop]
   pull_request:
-    branches: [main]
+    branches: [main, develop]
+  workflow_dispatch:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    name: Test on Node.js ${{ matrix.node-version }}
+    runs-on: ${{ matrix.os }}
+    
     strategy:
+      fail-fast: false
       matrix:
-        node-version: [18.x, 20.x]
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        node-version: [18.x, 20.x, 21.x]
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v3
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
           cache: 'npm'
@@ -28,15 +34,176 @@ jobs:
       - name: Run linter
         run: npm run lint
 
+      - name: Run type check
+        run: npx tsc --noEmit
+
       - name: Run tests
-        run: npm test -- --coverage
+        run: npm test -- --coverage --ci --maxWorkers=2
 
       - name: Build package
         run: npm run build
 
+      - name: Check bundle size
+        run: |
+          echo "📦 Bundle sizes:"
+          du -sh dist/
+          du -h dist/* | sort -h
+
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
+        if: matrix.os == 'ubuntu-latest' && matrix.node-version == '20.x'
+        uses: codecov/codecov-action@v4
         with:
-          file: ./coverage/coverage-final.json
+          files: ./coverage/coverage-final.json
           flags: unittests
-          name: codecov-umbrella
+          name: node-${{ matrix.node-version }}
+          fail_ci_if_error: false
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+  lint:
+    name: Lint and Format Check
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ESLint
+        run: npm run lint
+
+      - name: Check formatting (if Prettier configured)
+        run: |
+          if [ -f ".prettierrc" ] || [ -f ".prettierrc.json" ]; then
+            npx prettier --check "src/**/*.{ts,tsx,js,jsx,json}"
+          fi
+        continue-on-error: true
+
+  security:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+
+      - name: Run npm audit
+        run: npm audit --audit-level=moderate
+        continue-on-error: true
+
+  publish-check:
+    name: Publish Dry Run
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build package
+        run: npm run build
+
+      - name: Verify package contents
+        run: npm pack --dry-run
+
+      - name: Check package.json validity
+        run: |
+          node -e "
+          const pkg = require('./package.json');
+          const required = ['name', 'version', 'main', 'types', 'exports'];
+          const missing = required.filter(field => !pkg[field]);
+          if (missing.length > 0) {
+            console.error('❌ Missing required fields:', missing.join(', '));
+            process.exit(1);
+          }
+          console.log('✅ package.json is valid');
+          "
+
+  compatibility:
+    name: Build Compatibility Check
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build package
+        run: npm run build
+
+      - name: Check ESM build
+        run: |
+          if [ -d "dist/esm" ]; then
+            echo "✅ ESM build found"
+            ls -lh dist/esm/
+          else
+            echo "⚠️ No ESM build detected"
+          fi
+
+      - name: Check CJS build
+        run: |
+          if [ -d "dist/cjs" ]; then
+            echo "✅ CJS build found"
+            ls -lh dist/cjs/
+          else
+            echo "⚠️ No CJS build detected"
+          fi
+
+      - name: Verify type definitions
+        run: |
+          if [ -f "dist/esm/types.d.ts" ]; then
+            echo "✅ Type definitions found"
+          else
+            echo "❌ Type definitions missing"
+            exit 1
+          fi
+
+  status-check:
+    name: All Tests Passed
+    runs-on: ubuntu-latest
+    needs: [test, lint, security, publish-check, compatibility]
+    if: always()
+    
+    steps:
+      - name: Check status
+        run: |
+          if [ "${{ needs.test.result }}" != "success" ]; then
+            echo "❌ Tests failed"
+            exit 1
+          fi
+          if [ "${{ needs.lint.result }}" != "success" ]; then
+            echo "❌ Linting failed"
+            exit 1
+          fi
+          echo "✅ All checks passed!"

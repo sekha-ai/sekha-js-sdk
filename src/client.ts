@@ -124,11 +124,14 @@ export class MemoryController {
     }
 
     this.config = {
-      timeout: 30000,
-      maxRetries: 3,
-      rateLimit: 1000,
-      ...config,
+      baseURL: config.baseURL,
+      apiKey: config.apiKey,
+      defaultLabel: config.defaultLabel ?? '',
+      timeout: config.timeout ?? 30000,
+      maxRetries: config.maxRetries ?? 3,
+      rateLimit: config.rateLimit ?? 1000,
     };
+
 
     this.rateLimiter = new RateLimiter(this.config.rateLimit, 60);
     this.backoff = new ExponentialBackoff();

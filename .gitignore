@@ -44,9 +44,18 @@ pids/
 .env
 .env.test
 .env.production
+.env.local
+.env.*.local
 
 # Sekha dev files
 config.toml
 *.db
 *.db-shm
 *.db-wal
+
+# Temporary files
+*.tmp
+.cache/
+
+# Package artifacts
+*.tgz
