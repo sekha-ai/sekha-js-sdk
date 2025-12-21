@@ -1,4 +1,4 @@
-import { jest, describe, it, expect, beforeEach } from '@jest/globals';
+import { jest, describe, it, expect, beforeEach, afterEach } from '@jest/globals';
 import { MemoryController } from '../src/client';
 import { mockConfig, mockConversation, createMockResponse, createMockErrorResponse } from './mocks';
 import { SekhaNotFoundError, SekhaValidationError, SekhaAPIError } from '../src/errors';
@@ -7,12 +7,20 @@ import { SekhaNotFoundError, SekhaValidationError, SekhaAPIError } from '../src/
 const mockFetch = jest.fn() as jest.MockedFunction<typeof fetch>;
 (global.fetch as any) = mockFetch;
 
+// Mock timers for rate limiting
+jest.useFakeTimers();
+
 describe('MemoryController', () => {
   let client: MemoryController;
 
   beforeEach(() => {
     client = new MemoryController(mockConfig);
     mockFetch.mockClear();
+    jest.clearAllTimers();
+  });
+
+  afterEach(() => {
+    jest.runAllTimers();
   });
 
   describe('constructor', () => {
@@ -69,7 +77,10 @@ describe('MemoryController', () => {
 
   describe('listConversations', () => {
     it('should list all conversations', async () => {
-      mockFetch.mockResolvedValue(await createMockResponse([mockConversation]));
+      // UPDATED: Wrap in { conversations: [...] } to match API
+      mockFetch.mockResolvedValue(await createMockResponse({ 
+        conversations: [mockConversation] 
+      }));
 
       const results = await client.listConversations();
 
@@ -78,7 +89,10 @@ describe('MemoryController', () => {
     });
 
     it('should apply filters', async () => {
-      mockFetch.mockResolvedValue(await createMockResponse([mockConversation]));
+      // UPDATED: Wrap in { conversations: [...] } to match API
+      mockFetch.mockResolvedValue(await createMockResponse({ 
+        conversations: [mockConversation] 
+      }));
 
       await client.listConversations({ label: 'Test', status: 'active' });
 
@@ -90,7 +104,7 @@ describe('MemoryController', () => {
 
   describe('updateLabel', () => {
     it('should update conversation label', async () => {
-      mockFetch.mockResolvedValue(await createMockResponse({}, 200));
+      mockFetch.mockResolvedValue(await createMockResponse(mockConversation, 200));
 
       await client.updateLabel(mockConversation.id, 'New Label');
 
@@ -100,7 +114,7 @@ describe('MemoryController', () => {
 
   describe('pin', () => {
     it('should pin a conversation', async () => {
-      mockFetch.mockResolvedValue(await createMockResponse({}, 200));
+      mockFetch.mockResolvedValue(await createMockResponse(mockConversation, 200));
 
       await client.pin(mockConversation.id);
 
@@ -110,7 +124,7 @@ describe('MemoryController', () => {
 
   describe('archive', () => {
     it('should archive a conversation', async () => {
-      mockFetch.mockResolvedValue(await createMockResponse({}, 200));
+      mockFetch.mockResolvedValue(await createMockResponse(mockConversation, 200));
 
       await client.archive(mockConversation.id);
 
@@ -130,7 +144,10 @@ describe('MemoryController', () => {
 
   describe('search', () => {
     it('should perform semantic search', async () => {
-      mockFetch.mockResolvedValue(await createMockResponse([{ ...mockConversation, score: 0.95 }]));
+      // UPDATED: Wrap in { results: [...] } to match API
+      mockFetch.mockResolvedValue(await createMockResponse({ 
+        results: [{ ...mockConversation, score: 0.95, similarity: 0.95 }] 
+      }));
 
       const results = await client.search('test query');
 
