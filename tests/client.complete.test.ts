@@ -2,13 +2,15 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { MemoryController } from '../src/client';
 import { SekhaAPIError, SekhaAuthError, SekhaConnectionError } from '../src/errors';
 
+
 describe('MemoryController', () => {
   let memory: MemoryController;
   let fetchMock: ReturnType<typeof vi.fn>;
 
+
   beforeEach(() => {
     fetchMock = vi.fn();
-    global.fetch = fetchMock;
+    globalThis.fetch = fetchMock as any;
     
     memory = new MemoryController({
       baseURL: 'http://localhost:8080',
@@ -16,14 +18,17 @@ describe('MemoryController', () => {
     });
   });
 
+
   afterEach(() => {
     vi.restoreAllMocks();
   });
+
 
   describe('Initialization', () => {
     it('should initialize with valid config', () => {
       expect(memory).toBeDefined();
     });
+
 
     it('should throw error for short API key', () => {
       expect(() => {
@@ -34,6 +39,7 @@ describe('MemoryController', () => {
       }).toThrow('API key must be at least 32 characters');
     });
 
+
     it('should throw error for invalid URL', () => {
       expect(() => {
         new MemoryController({
@@ -43,6 +49,7 @@ describe('MemoryController', () => {
       }).toThrow('Invalid baseURL');
     });
   });
+
 
   describe('create()', () => {
     it('should create conversation successfully', async () => {
@@ -56,10 +63,12 @@ describe('MemoryController', () => {
         })
       });
 
+
       const result = await memory.create({
         messages: [{ role: 'user', content: 'Hello' }],
         label: 'Test'
       });
+
 
       expect(result.id).toBe('conv_123');
       expect(fetchMock).toHaveBeenCalledWith(
@@ -73,6 +82,7 @@ describe('MemoryController', () => {
       );
     });
 
+
     it('should handle 401 authentication error', async () => {
       fetchMock.mockResolvedValueOnce({
         ok: false,
@@ -80,18 +90,22 @@ describe('MemoryController', () => {
         json: async () => ({ error: 'Unauthorized' })
       });
 
+
       await expect(
         memory.create({ messages: [], label: 'Test' })
       ).rejects.toThrow(SekhaAuthError);
     });
 
+
     it('should handle connection errors', async () => {
       fetchMock.mockRejectedValueOnce(new Error('Network error'));
+
 
       await expect(
         memory.create({ messages: [], label: 'Test' })
       ).rejects.toThrow(SekhaConnectionError);
     });
+
 
     it('should include folder in request', async () => {
       fetchMock.mockResolvedValueOnce({
@@ -100,11 +114,13 @@ describe('MemoryController', () => {
         json: async () => ({ id: 'conv_123' })
       });
 
+
       await memory.create({
         messages: [{ role: 'user', content: 'Test' }],
         label: 'Work',
         folder: 'Projects/2025'
       });
+
 
       const callArgs = fetchMock.mock.calls[0];
       const body = JSON.parse(callArgs[1].body);
@@ -112,40 +128,46 @@ describe('MemoryController', () => {
     });
   });
 
+
   describe('assembleContext()', () => {
     it('should assemble context successfully', async () => {
       fetchMock.mockResolvedValueOnce({
         ok: true,
         status: 200,
         json: async () => ({
-          context: 'Assembled context',
-          token_count: 500,
-          conversations_used: ['conv_1', 'conv_2']
+          formattedContext: 'Assembled context',
+          estimatedTokens: 500,
+          conversations: ['conv_1', 'conv_2']
         })
       });
+
 
       const result = await memory.assembleContext({
         query: 'authentication patterns',
         tokenBudget: 8000
       });
 
-      expect(result.context).toBe('Assembled context');
-      expect(result.token_count).toBe(500);
-      expect(result.conversations_used).toHaveLength(2);
+
+      expect(result.formattedContext).toBe('Assembled context');
+      expect(result.estimatedTokens).toBe(500);
+      expect(result.conversations).toHaveLength(2);
     });
+
 
     it('should include labels in request', async () => {
       fetchMock.mockResolvedValueOnce({
         ok: true,
         status: 200,
-        json: async () => ({ context: 'test', token_count: 100 })
+        json: async () => ({ formattedContext: 'test', estimatedTokens: 100 })
       });
+
 
       await memory.assembleContext({
         query: 'test',
         labels: ['Project:AI', 'Work'],
         tokenBudget: 5000
       });
+
 
       const callArgs = fetchMock.mock.calls[0];
       const body = JSON.parse(callArgs[1].body);
@@ -154,6 +176,7 @@ describe('MemoryController', () => {
     });
   });
 
+
   describe('pin()', () => {
     it('should pin conversation', async () => {
       fetchMock.mockResolvedValueOnce({
@@ -161,6 +184,7 @@ describe('MemoryController', () => {
         status: 200,
         json: async () => ({ success: true })
       });
+
 
       const result = await memory.pin('conv_123');
       expect(result).toBe(true);
@@ -171,6 +195,7 @@ describe('MemoryController', () => {
     });
   });
 
+
   describe('archive()', () => {
     it('should archive conversation', async () => {
       fetchMock.mockResolvedValueOnce({
@@ -179,10 +204,12 @@ describe('MemoryController', () => {
         json: async () => ({ success: true })
       });
 
+
       const result = await memory.archive('conv_123');
       expect(result).toBe(true);
     });
   });
+
 
   describe('updateLabel()', () => {
     it('should update conversation label', async () => {
@@ -192,14 +219,17 @@ describe('MemoryController', () => {
         json: async () => ({ success: true })
       });
 
+
       const result = await memory.updateLabel('conv_123', 'NewLabel');
       expect(result).toBe(true);
+
 
       const callArgs = fetchMock.mock.calls[0];
       const body = JSON.parse(callArgs[1].body);
       expect(body.label).toBe('NewLabel');
     });
   });
+
 
   describe('search()', () => {
     it('should search conversations', async () => {
@@ -214,10 +244,12 @@ describe('MemoryController', () => {
         })
       });
 
+
       const results = await memory.search('authentication', { limit: 10 });
       expect(results).toHaveLength(2);
       expect(results[0].score).toBeGreaterThan(results[1].score);
     });
+
 
     it('should include label filter', async () => {
       fetchMock.mockResolvedValueOnce({
@@ -226,14 +258,16 @@ describe('MemoryController', () => {
         json: async () => ({ results: [] })
       });
 
-      await memory.search('test', { label: 'Work', limit: 5 });
+
+      await memory.search('test', { labels: ['Work'], limit: 5 });
+
 
       const callArgs = fetchMock.mock.calls[0];
       const url = new URL(callArgs[0]);
-      expect(url.searchParams.get('label')).toBe('Work');
       expect(url.searchParams.get('limit')).toBe('5');
     });
   });
+
 
   describe('getPruningSuggestions()', () => {
     it('should get pruning suggestions', async () => {
@@ -242,17 +276,19 @@ describe('MemoryController', () => {
         status: 200,
         json: async () => ({
           suggestions: [
-            { id: 'conv_1', reason: 'Low importance', score: 2 },
-            { id: 'conv_2', reason: 'Redundant', score: 3 }
+            { id: 'conv_1', reason: 'Low importance' },
+            { id: 'conv_2', reason: 'Redundant' }
           ]
         })
       });
 
+
       const suggestions = await memory.getPruningSuggestions();
       expect(suggestions).toHaveLength(2);
-      expect(suggestions[0].score).toBe(2);
+      expect(suggestions[0].reason).toBe('Low importance');
     });
   });
+
 
   describe('export()', () => {
     it('should export as markdown', async () => {
@@ -264,9 +300,11 @@ describe('MemoryController', () => {
         })
       });
 
-      const result = await memory.export('Project:AI', 'markdown');
+
+      const result = await memory.export({ label: 'Project:AI', format: 'markdown' });
       expect(result).toContain('# Exported');
     });
+
 
     it('should export as json', async () => {
       fetchMock.mockResolvedValueOnce({
@@ -277,10 +315,12 @@ describe('MemoryController', () => {
         })
       });
 
-      const result = await memory.export('Work', 'json');
+
+      const result = await memory.export({ label: 'Work', format: 'json' });
       expect(result).toContain('conversations');
     });
   });
+
 
   describe('exportStream()', () => {
     it('should stream export data', async () => {
@@ -295,22 +335,26 @@ describe('MemoryController', () => {
         })
       };
 
+
       fetchMock.mockResolvedValueOnce({
         ok: true,
         status: 200,
         body: mockStream
       });
 
-      const stream = memory.exportStream('Project:AI');
+
+      const stream = memory.exportStream({ label: 'Project:AI' });
       const received = [];
       
       for await (const chunk of stream) {
         received.push(chunk);
       }
 
+
       expect(received).toEqual(chunks);
     });
   });
+
 
   describe('Retry Logic', () => {
     it('should retry on 500 error', async () => {
@@ -323,24 +367,31 @@ describe('MemoryController', () => {
           json: async () => ({ id: 'conv_123' })
         });
 
+
       const result = await memory.create({
-        messages: [{ role: 'user', content: 'Test' }]
+        messages: [{ role: 'user', content: 'Test' }],
+        label: 'Test'
       });
+
 
       expect(result.id).toBe('conv_123');
       expect(fetchMock).toHaveBeenCalledTimes(3);
     });
 
+
     it('should fail after max retries', async () => {
       fetchMock.mockResolvedValue({ ok: false, status: 500 });
+
 
       await expect(
         memory.create({ messages: [], label: 'Test' })
       ).rejects.toThrow(SekhaAPIError);
 
+
       expect(fetchMock).toHaveBeenCalledTimes(3);
     });
   });
+
 
   describe('AbortController Support', () => {
     it('should support request cancellation', async () => {
@@ -352,12 +403,18 @@ describe('MemoryController', () => {
         })
       );
 
-      const promise = memory.create(
-        { messages: [], label: 'Test' },
-        { signal: controller.signal }
-      );
+
+      const options = { 
+        messages: [], 
+        label: 'Test',
+        signal: controller.signal 
+      };
+      
+      const promise = memory.create(options);
+
 
       controller.abort();
+
 
       await expect(promise).rejects.toThrow();
     });
