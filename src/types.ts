@@ -33,6 +33,7 @@ export interface CreateOptions {
   folder?: string;
   importanceScore?: number;
   metadata?: Record<string, any>;
+  signal?: AbortSignal;
 }
 
 export interface ListFilter {

@@ -1,8 +1,10 @@
+import { vi } from 'vitest';
 import { Conversation, MemoryConfig } from '../src/types';
 
+// Add URL validation if not present in client
 export const mockConfig: MemoryConfig = {
   baseURL: 'http://localhost:8080',
-  apiKey: 'test-api-key',
+  apiKey: 'sk-test-12345678901234567890123456789012', // 40 chars
   defaultLabel: 'Test',
   timeout: 30000,
 };
@@ -20,7 +22,6 @@ export const mockConversation: Conversation = {
   updatedAt: '2025-01-01T00:00:00Z',
 };
 
-// Helper to create a proper Response mock
 export function createMockResponse(data: any, status = 200): Promise<Response> {
   const body = JSON.stringify(data);
   const response: Response = {
@@ -39,7 +40,7 @@ export function createMockResponse(data: any, status = 200): Promise<Response> {
     type: 'basic',
     url: '',
   } as Response;
-  
+
   return Promise.resolve(response);
 }
 
@@ -61,6 +62,6 @@ export function createMockErrorResponse(status: number, message: string): Promis
     type: 'basic',
     url: '',
   } as Response;
-  
+
   return Promise.resolve(response);
 }

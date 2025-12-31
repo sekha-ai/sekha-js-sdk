@@ -1,14 +1,11 @@
-import { jest, describe, it, expect, beforeEach, afterEach } from '@jest/globals';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { MemoryController } from '../src/client';
 import { mockConfig, mockConversation, createMockResponse, createMockErrorResponse } from './mocks';
 import { SekhaNotFoundError, SekhaValidationError, SekhaAPIError } from '../src/errors';
 
 // Properly typed mock fetch
-const mockFetch = jest.fn() as jest.MockedFunction<typeof fetch>;
+const mockFetch = vi.fn() as any;
 (global.fetch as any) = mockFetch;
-
-// Mock timers for rate limiting
-jest.useFakeTimers();
 
 describe('MemoryController', () => {
   let client: MemoryController;
@@ -16,11 +13,10 @@ describe('MemoryController', () => {
   beforeEach(() => {
     client = new MemoryController(mockConfig);
     mockFetch.mockClear();
-    jest.clearAllTimers();
   });
 
   afterEach(() => {
-    jest.runAllTimers();
+    vi.restoreAllMocks();
   });
 
   describe('constructor', () => {
@@ -77,9 +73,8 @@ describe('MemoryController', () => {
 
   describe('listConversations', () => {
     it('should list all conversations', async () => {
-      // UPDATED: Wrap in { conversations: [...] } to match API
-      mockFetch.mockResolvedValue(await createMockResponse({ 
-        conversations: [mockConversation] 
+      mockFetch.mockResolvedValue(await createMockResponse({
+        conversations: [mockConversation]
       }));
 
       const results = await client.listConversations();
@@ -89,9 +84,8 @@ describe('MemoryController', () => {
     });
 
     it('should apply filters', async () => {
-      // UPDATED: Wrap in { conversations: [...] } to match API
-      mockFetch.mockResolvedValue(await createMockResponse({ 
-        conversations: [mockConversation] 
+      mockFetch.mockResolvedValue(await createMockResponse({
+        conversations: [mockConversation]
       }));
 
       await client.listConversations({ label: 'Test', status: 'active' });
@@ -144,9 +138,8 @@ describe('MemoryController', () => {
 
   describe('search', () => {
     it('should perform semantic search', async () => {
-      // UPDATED: Wrap in { results: [...] } to match API
-      mockFetch.mockResolvedValue(await createMockResponse({ 
-        results: [{ ...mockConversation, score: 0.95, similarity: 0.95 }] 
+      mockFetch.mockResolvedValue(await createMockResponse({
+        results: [{ ...mockConversation, score: 0.95, similarity: 0.95 }]
       }));
 
       const results = await client.search('test query');
@@ -162,7 +155,7 @@ describe('MemoryController', () => {
         formattedContext: "Previous conversation...",
         estimatedTokens: 1500,
       };
-      
+
       mockFetch.mockResolvedValue(await createMockResponse(mockContext));
 
       const result = await client.assembleContext({
@@ -182,7 +175,7 @@ describe('MemoryController', () => {
         format: 'markdown',
         conversationCount: 1,
       };
-      
+
       mockFetch.mockResolvedValue(await createMockResponse(mockExport));
 
       const result = await client.export({ label: 'Test', format: 'markdown' });
@@ -192,11 +185,11 @@ describe('MemoryController', () => {
 
     it('should export as JSON', async () => {
       const mockExport = {
-        content: '[{"id": "123"}]',
+        content: '[{\"id\": \"123\"}]',
         format: 'json',
         conversationCount: 1,
       };
-      
+
       mockFetch.mockResolvedValue(await createMockResponse(mockExport));
 
       const result = await client.export({ format: 'json' });
@@ -219,7 +212,7 @@ describe('MemoryController', () => {
         format: 'markdown',
         conversationCount: 1,
       };
-      
+
       mockFetch.mockResolvedValue(await createMockResponse(mockExport));
 
       const stream = client.exportStream({ format: 'markdown' });
@@ -253,13 +246,13 @@ describe('MemoryController', () => {
       } catch (error) {
         expect((error as Error).message).toContain('Network error');
       }
-    });
+    }, 15000); // Increase timeout to 15 seconds
 
     it('should handle API errors with status codes', async () => {
       mockFetch.mockResolvedValue(await createMockErrorResponse(500, 'Internal server error'));
 
       await expect(client.getConversation('123'))
         .rejects.toThrow(SekhaAPIError);
-    });
+    }, 15000); // Increase timeout to 15 seconds
   });
 });

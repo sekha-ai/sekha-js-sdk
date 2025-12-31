@@ -123,6 +123,16 @@ export class MemoryController {
       );
     }
 
+    // Validate URL
+  try {
+    new URL(config.baseURL);
+  } catch {
+    throw new SekhaValidationError(
+      'Invalid baseURL',
+      'baseURL must be a valid URL (e.g., http://localhost:8080 or https://api.sekha-ai.dev)'
+    );
+  }
+
     this.config = {
       baseURL: config.baseURL,
       apiKey: config.apiKey,
@@ -161,9 +171,11 @@ export class MemoryController {
    * ```
    */
   async store(options: CreateOptions): Promise<Conversation> {
+    const { signal, ...bodyOptions } = options;
     return this.request('/api/v1/conversations', {
       method: 'POST',
-      body: JSON.stringify(options),
+      body: JSON.stringify(bodyOptions),
+      signal,
     });
   }
 
