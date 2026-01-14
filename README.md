@@ -1,14 +1,13 @@
-# Sekha JavaScript/TypeScript SDK
-
-<div align="center">
-
-[![npm version](https://img.shields.io/npm/v/@sekha/sdk.svg)](https://www.npmjs.com/package/@sekha/sdk)
-[![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/)
+[![CI Status](https://github.com/sekha-ai/sekha-js-sdk/workflows/CI/badge.svg)](https://github.com/sekha-ai/sekha-js-sdk/actions)
+[![codecov](https://codecov.io/gh/sekha-ai/sekha-js-sdk/branch/main/graph/badge.svg)](https://codecov.io/gh/sekha-ai/sekha-js-sdk)
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
+[![TypeScript](https://img.shields.io/badge/typescript-5.3%2B-blue.svg)](https://www.typescriptlang.org)
+[![npm](https://img.shields.io/npm/v/@sekha-ai/sekha-js-sdk.svg)](https://www.npmjs.com/package/@sekha-ai/sekha-js-sdk)
 
 Official JavaScript/TypeScript SDK for [Sekha AI Memory Controller](https://github.com/sekha-ai/sekha-controller) - Persistent context management for AI applications.
+---
 
-</div>
+# Sekha JavaScript/TypeScript SDK
 
 ---
 
