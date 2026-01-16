@@ -37,7 +37,7 @@
   "homepage": "https://github.com/sekha-ai/sekha-js-sdk#readme",
   "devDependencies": {
     "@types/node": "^25.0.9",
-    "@vitest/coverage-v8": "^4.0.16",
+    "@vitest/coverage-v8": "^4.0.17",
     "@vitest/ui": "^4.0.16",
     "happy-dom": "^20.0.11",
     "typescript": "^5.9.0",
