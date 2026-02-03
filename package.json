@@ -39,7 +39,7 @@
     "@types/node": "^25.0.10",
     "@vitest/coverage-v8": "^4.0.18",
     "@vitest/ui": "^4.0.16",
-    "happy-dom": "^20.3.9",
+    "happy-dom": "^20.5.0",
     "typescript": "^5.9.0",
     "vitest": "^4.0.18"
   }
