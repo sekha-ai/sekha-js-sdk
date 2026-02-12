@@ -1,28 +1,81 @@
-// Core models
+/**
+ * Complete Type Definitions for Sekha SDK
+ * 
+ * All types match controller (Rust) and bridge (Python) exactly.
+ * Organized by domain: Core, API, MCP, Bridge, Utilities
+ * 
+ * @module @sekha/sdk/types
+ */
+
+// ============================================
+// CORE MODELS
+// ============================================
+
+/**
+ * Content part for multi-modal messages (text + images)
+ * Matches controller ContentPart enum
+ */
+export type ContentPart =
+  | { type: 'text'; text: string }
+  | { type: 'image_url'; image_url: ImageUrl };
+
+/**
+ * Image URL with optional detail level for vision models
+ */
+export interface ImageUrl {
+  /** URL to image (http/https) or base64 data URI */
+  url: string;
+  /** Detail level: 'low' | 'high' | 'auto' */
+  detail?: string;
+}
+
+/**
+ * Message content - either simple text or multi-modal parts
+ * Matches controller MessageContent enum
+ */
+export type MessageContent = string | ContentPart[];
+
+/**
+ * Message in a conversation
+ * Supports both simple text and multi-modal content (text + images)
+ */
 export interface Message {
   role: 'user' | 'assistant' | 'system';
-  content: string;
+  /** Content can be simple string or array of content parts */
+  content: MessageContent;
   timestamp?: string;
   metadata?: Record<string, any>;
 }
 
 /**
- * Conversation type matching controller's actual response
- * All fields match src/api/routes.rs ConversationResponse
+ * Conversation status
+ */
+export type ConversationStatus = 'active' | 'archived' | 'pinned';
+
+/**
+ * Conversation type matching controller ConversationResponse
+ * All fields match src/api/dto.rs exactly
  */
 export interface Conversation {
   id: string;
   label: string;
   folder: string; // Required in controller
-  status: 'active' | 'archived' | 'pinned';
-  message_count: number; // Controller returns message_count, not messageCount
-  created_at: string; // Controller uses snake_case
+  status: ConversationStatus;
+  message_count: number; // snake_case from controller
+  created_at: string; // ISO 8601 datetime
   updated_at?: string; // Optional in some responses
-  importance_score?: number; // Optional
+  importance_score?: number; // Optional, 1-10
   word_count?: number; // Optional
   session_count?: number; // Optional
 }
 
+// ============================================
+// CONFIGURATION
+// ============================================
+
+/**
+ * Memory controller configuration
+ */
 export interface MemoryConfig {
   baseURL: string;
   apiKey: string;
@@ -32,7 +85,13 @@ export interface MemoryConfig {
   rateLimit?: number;
 }
 
-// API Options
+// ============================================
+// REQUEST TYPES
+// ============================================
+
+/**
+ * Create conversation options
+ */
 export interface CreateOptions {
   messages: Message[];
   label: string;
@@ -42,6 +101,9 @@ export interface CreateOptions {
   signal?: AbortSignal;
 }
 
+/**
+ * List/filter options for conversations
+ */
 export interface ListFilter {
   label?: string;
   folder?: string;
@@ -53,6 +115,9 @@ export interface ListFilter {
   offset?: number; // Alternative pagination
 }
 
+/**
+ * Search options
+ */
 export interface SearchOptions {
   limit?: number;
   offset?: number;
@@ -61,6 +126,9 @@ export interface SearchOptions {
   signal?: AbortSignal;
 }
 
+/**
+ * Context assembly options
+ */
 export interface ContextOptions {
   query: string;
   preferred_labels?: string[];
@@ -69,6 +137,9 @@ export interface ContextOptions {
   signal?: AbortSignal;
 }
 
+/**
+ * Export options
+ */
 export interface ExportOptions {
   label?: string;
   format?: 'markdown' | 'json';
@@ -77,27 +148,28 @@ export interface ExportOptions {
 }
 
 /**
- * Search result matching controller's SearchResultDto
+ * Update label request
  */
-export interface SearchResult {
-  conversation_id: string;
-  message_id: string;
-  score: number;
-  content: string;
-  metadata: Record<string, any>;
+export interface UpdateLabelRequest {
   label: string;
-  folder: string;
-  timestamp: string;
+  folder: string; // Required - preserves folder structure
 }
 
 /**
- * Query response with pagination
+ * Update folder request
  */
-export interface QueryResponse {
-  results: SearchResult[];
-  total: number;
-  page: number;
-  page_size: number;
+export interface UpdateFolderRequest {
+  folder: string;
+}
+
+/**
+ * Query request
+ */
+export interface QueryRequest {
+  query: string;
+  filters?: any;
+  limit?: number;
+  offset?: number;
 }
 
 /**
@@ -109,11 +181,76 @@ export interface FtsSearchRequest {
 }
 
 /**
- * Full-text search response
+ * Context assemble request
  */
-export interface FtsSearchResponse {
-  results: FtsMessage[];
+export interface ContextAssembleRequest {
+  query: string;
+  preferred_labels?: string[];
+  context_budget?: number;
+  excluded_folders?: string[];
+}
+
+/**
+ * Summarize request
+ */
+export interface SummarizeRequest {
+  conversation_id: string;
+  level: 'daily' | 'weekly' | 'monthly';
+}
+
+/**
+ * Prune request
+ */
+export interface PruneRequest {
+  threshold_days: number;
+  importance_threshold?: number;
+}
+
+/**
+ * Execute prune request
+ */
+export interface ExecutePruneRequest {
+  conversation_ids: string[];
+}
+
+/**
+ * Label suggest request
+ */
+export interface LabelSuggestRequest {
+  conversation_id: string;
+}
+
+/**
+ * Rebuild embeddings request
+ */
+export interface RebuildEmbeddingsRequest {}
+
+// ============================================
+// RESPONSE TYPES
+// ============================================
+
+/**
+ * Search result matching controller SearchResultDto
+ */
+export interface SearchResult {
+  conversation_id: string;
+  message_id: string;
+  score: number;
+  content: string;
+  metadata: Record<string, any>;
+  label: string;
+  folder: string;
+  timestamp: string; // ISO 8601
+}
+
+/**
+ * Query response with pagination
+ */
+export interface QueryResponse {
+  results: SearchResult[];
   total: number;
+  page: number;
+  page_size: number;
 }
 
 /**
@@ -129,6 +266,14 @@ export interface FtsMessage {
 }
 
 /**
+ * Full-text search response
+ */
+export interface FtsSearchResponse {
+  results: FtsMessage[];
+  total: number;
+}
+
+/**
  * Context assembly result
  */
 export interface ContextAssembly {
@@ -138,17 +283,22 @@ export interface ContextAssembly {
 }
 
 /**
+ * Pruning recommendation type
+ */
+export type PruneRecommendation = 'archive' | 'keep' | 'review';
+
+/**
  * Pruning suggestion from controller
  */
 export interface PruningSuggestion {
   conversation_id: string;
   conversation_label: string;
-  last_accessed: string;
+  last_accessed: string; // ISO 8601
   message_count: number;
   token_estimate: number;
   importance_score: number;
   preview: string;
-  recommendation: string; // 'archive' | 'keep' | 'review'
+  recommendation: PruneRecommendation;
 }
 
 /**
@@ -157,6 +307,7 @@ export interface PruningSuggestion {
 export interface PruneResponse {
   suggestions: PruningSuggestion[];
   total: number;
+  estimated_token_savings?: number; // Optional aggregate
 }
 
 /**
@@ -164,9 +315,9 @@ export interface PruneResponse {
  */
 export interface LabelSuggestion {
   label: string;
-  confidence: number;
-  is_existing: boolean;
-  reason: string;
+  confidence: number; // 0-1
+  is_existing: boolean; // Whether label already exists
+  reason: string; // AI explanation
 }
 
 /**
@@ -178,21 +329,13 @@ export interface LabelSuggestResponse {
 }
 
 /**
- * Summary request
- */
-export interface SummarizeRequest {
-  conversation_id: string;
-  level: 'daily' | 'weekly' | 'monthly';
-}
-
-/**
  * Summary response
  */
 export interface SummaryResponse {
   conversation_id: string;
   level: string;
   summary: string;
-  generated_at: string;
+  generated_at: string; // ISO 8601
 }
 
 /**
@@ -205,10 +348,27 @@ export interface HealthStatus {
 }
 
 /**
- * Metrics response
+ * Error response
+ */
+export interface ErrorResponse {
+  error: string;
+  code: number;
+}
+
+/**
+ * Rebuild embeddings response
+ */
+export interface RebuildEmbeddingsResponse {
+  success: boolean;
+  message: string;
+  estimated_completion_seconds: number;
+}
+
+/**
+ * Metrics response (placeholder - controller returns "not_implemented")
  */
 export interface Metrics {
-  metrics: string; // Currently returns "not_implemented"
+  metrics: string;
   [key: string]: any; // Flexible for future metrics
 }
 
@@ -221,34 +381,189 @@ export interface CountResponse {
   folder?: string;
 }
 
+// ============================================
+// MCP (Model Context Protocol) TYPES
+// ============================================
+
 /**
- * Update label request
+ * Standard MCP tool response wrapper
  */
-export interface UpdateLabelRequest {
+export interface McpToolResponse<T = any> {
+  success: boolean;
+  data?: T;
+  error?: string;
+}
+
+/**
+ * MCP memory store request
+ */
+export interface MemoryStoreRequest {
   label: string;
   folder: string;
+  messages: Message[];
 }
 
 /**
- * Update folder request
+ * MCP memory query request
  */
-export interface UpdateFolderRequest {
-  folder: string;
-}
-
-/**
- * Execute prune request
- */
-export interface ExecutePruneRequest {
-  conversation_ids: string[];
-}
-
-/**
- * Context assemble request
- */
-export interface ContextAssembleRequest {
+export interface MemoryQueryRequest {
   query: string;
-  preferred_labels?: string[];
-  context_budget?: number;
-  excluded_folders?: string[];
+  filters?: any;
+  limit?: number;
 }
+
+/**
+ * MCP memory query response
+ */
+export interface MemoryQueryResponse {
+  success: boolean;
+  data: QueryResponse;
+  error?: string;
+}
+
+// ============================================
+// UTILITY TYPES
+// ============================================
+
+/**
+ * Pagination parameters
+ */
+export interface PaginationParams {
+  page?: number;
+  page_size?: number;
+  limit?: number;
+  offset?: number;
+}
+
+/**
+ * Filter parameters for searches
+ */
+export interface FilterParams {
+  labels?: string[];
+  folder?: string;
+  status?: ConversationStatus;
+  importance_min?: number;
+  importance_max?: number;
+  date_from?: string;
+  date_to?: string;
+}
+
+/**
+ * Sort parameters
+ */
+export interface SortParams {
+  field: 'created_at' | 'updated_at' | 'importance_score' | 'message_count';
+  order: 'asc' | 'desc';
+}
+
+/**
+ * Bulk operation result
+ */
+export interface BulkOperationResult {
+  success: number;
+  failed: number;
+  errors?: Array<{ id: string; error: string }>;
+}
+
+// ============================================
+// TYPE GUARDS
+// ============================================
+
+/**
+ * Check if content is multi-modal (has images)
+ */
+export function isMultiModalContent(
+  content: MessageContent
+): content is ContentPart[] {
+  return Array.isArray(content);
+}
+
+/**
+ * Check if content part is text
+ */
+export function isTextPart(part: ContentPart): part is { type: 'text'; text: string } {
+  return part.type === 'text';
+}
+
+/**
+ * Check if content part is image
+ */
+export function isImagePart(
+  part: ContentPart
+): part is { type: 'image_url'; image_url: ImageUrl } {
+  return part.type === 'image_url';
+}
+
+/**
+ * Extract text from message content
+ */
+export function extractText(content: MessageContent): string {
+  if (typeof content === 'string') {
+    return content;
+  }
+
+  return content
+    .filter(isTextPart)
+    .map(part => part.text)
+    .join(' ');
+}
+
+/**
+ * Extract image URLs from message content
+ */
+export function extractImageUrls(content: MessageContent): string[] {
+  if (typeof content === 'string') {
+    return [];
+  }
+
+  return content
+    .filter(isImagePart)
+    .map(part => part.image_url.url);
+}
+
+/**
+ * Check if message has images
+ */
+export function hasImages(message: Message): boolean {
+  return extractImageUrls(message.content).length > 0;
+}
+
+/**
+ * Validate conversation status
+ */
+export function isValidStatus(status: string): status is ConversationStatus {
+  return ['active', 'archived', 'pinned'].includes(status);
+}
+
+/**
+ * Validate prune recommendation
+ */
+export function isValidRecommendation(
+  rec: string
+): rec is PruneRecommendation {
+  return ['archive', 'keep', 'review'].includes(rec);
+}
+
+// ============================================
+// LEGACY ALIASES (for backward compatibility)
+// ============================================
+
+/**
+ * @deprecated Use Conversation instead
+ */
+export type ConversationDto = Conversation;
+
+/**
+ * @deprecated Use SearchResult instead
+ */
+export type SearchResultDto = SearchResult;
+
+/**
+ * @deprecated Use PruningSuggestion instead
+ */
+export type PruningSuggestionDto = PruningSuggestion;
+
+/**
+ * @deprecated Use LabelSuggestion instead
+ */
+export type LabelSuggestionDto = LabelSuggestion;
