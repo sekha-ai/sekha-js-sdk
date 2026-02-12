@@ -183,7 +183,7 @@ export class MemoryController {
    */
   async store(options: CreateOptions): Promise<Conversation> {
     const { signal, ...bodyOptions } = options;
-    return this.request('/api/v1/conversations', {
+    return this.request<Conversation>('/api/v1/conversations', {
       method: 'POST',
       body: JSON.stringify(bodyOptions),
       signal,
@@ -206,7 +206,7 @@ export class MemoryController {
    * @returns Full conversation data
    */
   async get(id: string): Promise<Conversation> {
-    return this.request(`/api/v1/conversations/${id}`);
+    return this.request<Conversation>(`/api/v1/conversations/${id}`);
   }
 
   /**
@@ -243,7 +243,7 @@ export class MemoryController {
       ? `/api/v1/conversations?${queryString}` 
       : '/api/v1/conversations';
 
-    return this.request(url);
+    return this.request<QueryResponse>(url);
   }
 
   /**
@@ -263,7 +263,7 @@ export class MemoryController {
    * @param folder - New folder
    */
   async updateLabel(id: string, label: string, folder: string): Promise<void> {
-    await this.request(`/api/v1/conversations/${id}/label`, {
+    await this.request<void>(`/api/v1/conversations/${id}/label`, {
       method: 'PUT',
       body: JSON.stringify({ label, folder }),
     });
@@ -278,7 +278,7 @@ export class MemoryController {
    * @param folder - New folder path
    */
   async updateFolder(id: string, folder: string): Promise<void> {
-    await this.request(`/api/v1/conversations/${id}/folder`, {
+    await this.request<void>(`/api/v1/conversations/${id}/folder`, {
       method: 'PUT',
       body: JSON.stringify({ folder }),
     });
@@ -317,7 +317,7 @@ export class MemoryController {
    * @param id - Conversation UUID
    */
   async delete(id: string): Promise<void> {
-    await this.request(`/api/v1/conversations/${id}`, {
+    await this.request<void>(`/api/v1/conversations/${id}`, {
       method: 'DELETE',
     });
   }
@@ -352,7 +352,7 @@ export class MemoryController {
       ? `/api/v1/conversations/count?${queryString}`
       : '/api/v1/conversations/count';
     
-    return this.request(url);
+    return this.request<CountResponse>(url);
   }
 
   // ============================================
@@ -372,7 +372,7 @@ export class MemoryController {
    * ```
    * const response = await memory.query('API design patterns', {
    *   limit: 10,
- *   filters: { label: 'Engineering' }
+   *   filters: { label: 'Engineering' }
    * });
    * 
    * response.results.forEach(result => {
@@ -391,7 +391,7 @@ export class MemoryController {
       body.filters = options.filters;
     }
 
-    return this.request('/api/v1/query', {
+    return this.request<QueryResponse>('/api/v1/query', {
       method: 'POST',
       body: JSON.stringify(body),
       signal: options?.signal,
@@ -428,7 +428,7 @@ export class MemoryController {
       limit: limit ?? 50,
     };
 
-    return this.request('/api/v1/search/fts', {
+    return this.request<FtsSearchResponse>('/api/v1/search/fts', {
       method: 'POST',
       body: JSON.stringify(body),
     });
@@ -471,7 +471,7 @@ export class MemoryController {
       body.excluded_folders = options.excluded_folders;
     }
 
-    return this.request('/api/v1/context/assemble', {
+    return this.request<ContextAssembly>('/api/v1/context/assemble', {
       method: 'POST',
       body: JSON.stringify(body),
       signal: options.signal,
@@ -502,7 +502,7 @@ export class MemoryController {
       level,
     };
 
-    return this.request('/api/v1/summarize', {
+    return this.request<SummaryResponse>('/api/v1/summarize', {
       method: 'POST',
       body: JSON.stringify(body),
     });
@@ -522,7 +522,7 @@ export class MemoryController {
    * ```
    */
   async rebuildEmbeddings(): Promise<void> {
-    await this.request('/api/v1/rebuild-embeddings', {
+    await this.request<void>('/api/v1/rebuild-embeddings', {
       method: 'POST',
     });
   }
@@ -539,7 +539,7 @@ export class MemoryController {
    * @param id - Conversation UUID
    */
   async pin(id: string): Promise<void> {
-    await this.request(`/api/v1/conversations/${id}/pin`, {
+    await this.request<void>(`/api/v1/conversations/${id}/pin`, {
       method: 'PUT',
     });
   }
@@ -552,7 +552,7 @@ export class MemoryController {
    * @param id - Conversation UUID
    */
   async archive(id: string): Promise<void> {
-    await this.request(`/api/v1/conversations/${id}/archive`, {
+    await this.request<void>(`/api/v1/conversations/${id}/archive`, {
       method: 'PUT',
     });
   }
@@ -585,7 +585,7 @@ export class MemoryController {
     thresholdDays: number = 30,
     importanceThreshold: number = 5.0
   ): Promise<PruneResponse> {
-    return this.request('/api/v1/prune/dry-run', {
+    return this.request<PruneResponse>('/api/v1/prune/dry-run', {
       method: 'POST',
       body: JSON.stringify({
         threshold_days: thresholdDays,
@@ -617,7 +617,7 @@ export class MemoryController {
       conversation_ids: conversationIds,
     };
 
-    await this.request('/api/v1/prune/execute', {
+    await this.request<void>('/api/v1/prune/execute', {
       method: 'POST',
       body: JSON.stringify(body),
     });
@@ -646,7 +646,7 @@ export class MemoryController {
    * ```
    */
   async suggestLabels(id: string): Promise<LabelSuggestResponse> {
-    return this.request('/api/v1/labels/suggest', {
+    return this.request<LabelSuggestResponse>('/api/v1/labels/suggest', {
       method: 'POST',
       body: JSON.stringify({ conversation_id: id }),
     });
@@ -705,7 +705,7 @@ export class MemoryController {
         include_metadata: options.include_metadata ?? true,
       };
 
-      return this.request('/mcp/tools/memory_export', {
+      return this.request<Record<string, unknown>>('/mcp/tools/memory_export', {
         method: 'POST',
         body: JSON.stringify(body),
       });
@@ -716,7 +716,7 @@ export class MemoryController {
     if (options.label) params.append('label', options.label);
     params.append('format', options.format || 'markdown');
 
-    return this.request(`/api/v1/export?${params.toString()}`);
+    return this.request<Record<string, unknown>>(`/api/v1/export?${params.toString()}`);
   }
 
   /**
@@ -772,7 +772,7 @@ export class MemoryController {
    * @returns Health status information
    */
   async health(): Promise<HealthStatus> {
-    return this.request('/health');
+    return this.request<HealthStatus>('/health');
   }
 
   /**
@@ -783,7 +783,7 @@ export class MemoryController {
    * @returns Metrics data (currently returns "not_implemented")
    */
   async getMetrics(): Promise<Metrics> {
-    return this.request('/metrics');
+    return this.request<Metrics>('/metrics');
   }
 
   /**
@@ -792,7 +792,7 @@ export class MemoryController {
    * @returns Array of MCP tool definitions
    */
   async getMCPTools(): Promise<Record<string, unknown>[]> {
-    return this.request('/mcp/tools');
+    return this.request<Record<string, unknown>[]>('/mcp/tools');
   }
 
   // ============================================
@@ -802,10 +802,10 @@ export class MemoryController {
   /**
    * Make HTTP request with retry logic and error handling
    */
-  private async request(
+  private async request<T>(
     endpoint: string,
     options: RequestInit & { retryCount?: number } = {}
-  ): Promise<Record<string, unknown>> {
+  ): Promise<T> {
     const retryCount = options.retryCount || 0;
 
     // Rate limiting
@@ -846,11 +846,11 @@ export class MemoryController {
 
       // Handle 204 No Content
       if (response.status === 204) {
-        return {};
+        return {} as T;
       }
 
       const text = await response.text();
-      return text ? JSON.parse(text) : {};
+      return text ? JSON.parse(text) : ({} as T);
       
     } catch (error: unknown) {
       clearTimeout(timeoutId);
@@ -868,7 +868,7 @@ export class MemoryController {
         this.isRetryableError(error)
       ) {
         await this.backoff.wait(retryCount);
-        return this.request(endpoint, {
+        return this.request<T>(endpoint, {
           ...options,
           retryCount: retryCount + 1,
         });
