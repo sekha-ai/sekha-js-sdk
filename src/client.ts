@@ -15,14 +15,14 @@ import {
   SearchOptions,
   ContextOptions,
   ExportOptions,
-  SearchResult,
+  SearchResult as _SearchResult,
   QueryResponse,
   FtsSearchRequest,
   FtsSearchResponse,
   ContextAssembly,
-  PruningSuggestion,
+  PruningSuggestion as _PruningSuggestion,
   PruneResponse,
-  LabelSuggestion,
+  LabelSuggestion as _LabelSuggestion,
   LabelSuggestResponse,
   SummarizeRequest,
   SummaryResponse,
@@ -30,7 +30,7 @@ import {
   Metrics,
   CountResponse,
   ExecutePruneRequest,
-  Message,
+  Message as _Message,
 } from './types';
 import {
   SekhaError,
@@ -372,7 +372,7 @@ export class MemoryController {
    * ```
    * const response = await memory.query('API design patterns', {
    *   limit: 10,
-   *   filters: { label: 'Engineering' }
+ *   filters: { label: 'Engineering' }
    * });
    * 
    * response.results.forEach(result => {
@@ -381,7 +381,7 @@ export class MemoryController {
    * ```
    */
   async query(query: string, options?: SearchOptions): Promise<QueryResponse> {
-    const body: any = {
+    const body: Record<string, unknown> = {
       query,
       limit: options?.limit ?? 10,
       offset: options?.offset ?? 0,
@@ -459,7 +459,7 @@ export class MemoryController {
    * ```
    */
   async assembleContext(options: ContextOptions): Promise<ContextAssembly> {
-    const body: any = {
+    const body: Record<string, unknown> = {
       query: options.query,
       context_budget: options.context_budget ?? 8000,
     };
@@ -696,10 +696,10 @@ export class MemoryController {
    * });
    * ```
    */
-  async export(options: ExportOptions = {}): Promise<any> {
+  async export(options: ExportOptions = {}): Promise<Record<string, unknown>> {
     // If exporting single conversation, use conversation_id in body
     if (options.conversation_id) {
-      const body: any = {
+      const body: Record<string, unknown> = {
         conversation_id: options.conversation_id,
         format: options.format ?? 'json',
         include_metadata: options.include_metadata ?? true,
@@ -735,11 +735,11 @@ export class MemoryController {
    * ```
    */
   exportStream(options: ExportOptions = {}): AsyncIterable<string> {
-    const self = this;
+    const that = this;
 
     return {
       [Symbol.asyncIterator]: async function* () {
-        const content = await self.export(options);
+        const content = await that.export(options);
         const contentStr = typeof content === 'string' ? content : JSON.stringify(content);
         const chunkSize = 1024;
 
@@ -791,7 +791,7 @@ export class MemoryController {
    * 
    * @returns Array of MCP tool definitions
    */
-  async getMCPTools(): Promise<any[]> {
+  async getMCPTools(): Promise<Record<string, unknown>[]> {
     return this.request('/mcp/tools');
   }
 
@@ -805,7 +805,7 @@ export class MemoryController {
   private async request(
     endpoint: string,
     options: RequestInit & { retryCount?: number } = {}
-  ): Promise<any> {
+  ): Promise<Record<string, unknown>> {
     const retryCount = options.retryCount || 0;
 
     // Rate limiting
@@ -846,17 +846,17 @@ export class MemoryController {
 
       // Handle 204 No Content
       if (response.status === 204) {
-        return null;
+        return {};
       }
 
       const text = await response.text();
-      return text ? JSON.parse(text) : null;
+      return text ? JSON.parse(text) : {};
       
-    } catch (error: any) {
+    } catch (error: unknown) {
       clearTimeout(timeoutId);
 
       // Handle timeout
-      if (error.name === 'AbortError') {
+      if (error instanceof Error && error.name === 'AbortError') {
         throw new SekhaConnectionError(
           `Request timed out after ${this.config.timeout}ms`
         );
@@ -880,7 +880,7 @@ export class MemoryController {
       }
 
       // Wrap unknown errors
-      throw new SekhaConnectionError(`Request failed: ${error.message}`);
+      throw new SekhaConnectionError(`Request failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
@@ -888,7 +888,7 @@ export class MemoryController {
    * Handle HTTP error responses
    */
   private async handleError(response: Response): Promise<never> {
-    let errorData: any;
+    let errorData: Record<string, unknown>;
     
     try {
       const text = await response.text();
@@ -897,7 +897,7 @@ export class MemoryController {
       errorData = { error: 'Failed to parse error response' };
     }
 
-    const message = errorData.error || errorData.message || 'Unknown error';
+    const message = String(errorData.error || errorData.message || 'Unknown error');
 
     switch (response.status) {
       case 400:
@@ -929,7 +929,7 @@ export class MemoryController {
   /**
    * Check if error is retryable (network errors, timeouts, 5xx)
    */
-  private isRetryableError(error: any): boolean {
+  private isRetryableError(error: unknown): boolean {
     if (error instanceof SekhaAuthError) return false;
     if (error instanceof SekhaValidationError) return false;
     if (error instanceof SekhaNotFoundError) return false;
