@@ -293,7 +293,7 @@ export class BridgeClient {
       {
         ...request,
         stream: false, // Ensure non-streaming
-      }
+      } as Record<string, unknown>
     );
   }
 
@@ -422,7 +422,7 @@ export class BridgeClient {
    * ```
    */
   async embed(request: EmbedRequest): Promise<EmbedResponse> {
-    return this.request<EmbedResponse>('/api/v1/embed', request);
+    return this.request<EmbedResponse>('/api/v1/embed', request as Record<string, unknown>);
   }
 
   /**
@@ -457,7 +457,7 @@ export class BridgeClient {
       );
     }
 
-    return this.request<SummarizeResponse>('/api/v1/summarize', request);
+    return this.request<SummarizeResponse>('/api/v1/summarize', request as Record<string, unknown>);
   }
 
   /**
@@ -480,7 +480,7 @@ export class BridgeClient {
    * ```
    */
   async extract(request: ExtractRequest): Promise<ExtractResponse> {
-    return this.request<ExtractResponse>('/api/v1/extract', request);
+    return this.request<ExtractResponse>('/api/v1/extract', request as Record<string, unknown>);
   }
 
   /**
@@ -502,7 +502,7 @@ export class BridgeClient {
    * ```
    */
   async score(request: ScoreRequest): Promise<ScoreResponse> {
-    return this.request<ScoreResponse>('/api/v1/score', request);
+    return this.request<ScoreResponse>('/api/v1/score', request as Record<string, unknown>);
   }
 
   /**

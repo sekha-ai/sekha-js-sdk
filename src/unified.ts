@@ -10,7 +10,7 @@
 import { MemoryController } from './client';
 import { MCPClient } from './mcp';
 import { BridgeClient } from './bridge';
-import { Message, MemoryConfig as _MemoryConfig } from './types';
+import { Message, MemoryConfig as _MemoryConfig, MessageContent } from './types';
 import type {
   ChatMessage,
   CompletionRequest as _CompletionRequest,
@@ -49,6 +49,24 @@ export interface SekhaConfig {
   
   /** Default conversation label */
   defaultLabel?: string;
+}
+
+// ============================================
+// Helper Functions
+// ============================================
+
+/**
+ * Convert MessageContent to string for ChatMessage
+ */
+function messageContentToString(content: MessageContent): string {
+  if (typeof content === 'string') {
+    return content;
+  }
+  // If it's an array of ContentPart, extract text content
+  return content
+    .filter(part => part.type === 'text')
+    .map(part => part.text || '')
+    .join(' ');
 }
 
 // ============================================
@@ -229,7 +247,7 @@ export class SekhaClient {
       },
       ...context.messages.map(msg => ({
         role: msg.role as 'user' | 'assistant' | 'system',
-        content: msg.content,
+        content: messageContentToString(msg.content),
       })),
       {
         role: 'user',
@@ -373,7 +391,7 @@ export class SekhaClient {
     }
 
     const embedding = await this.bridge.embed({
-      text: firstUserMessage.content,
+      text: messageContentToString(firstUserMessage.content),
       model: options.embeddingModel,
     });
 
@@ -441,7 +459,7 @@ export class SekhaClient {
       },
       ...context.messages.map(msg => ({
         role: msg.role as 'user' | 'assistant' | 'system',
-        content: msg.content,
+        content: messageContentToString(msg.content),
       })),
       {
         role: 'user',
