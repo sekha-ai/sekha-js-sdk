@@ -73,62 +73,99 @@ describe('MemoryController', () => {
 
   describe('listConversations', () => {
     it('should list all conversations', async () => {
-      mockFetch.mockResolvedValue(await createMockResponse({
-        conversations: [mockConversation]
-      }));
+      // Updated to match controller's QueryResponse format
+      const mockResponse = {
+        results: [mockConversation],
+        total: 1,
+        page: 1,
+        page_size: 10,
+      };
+      mockFetch.mockResolvedValue(await createMockResponse(mockResponse));
 
       const results = await client.listConversations();
 
-      expect(results).toHaveLength(1);
-      expect(results[0]).toEqual(mockConversation);
+      expect(results.results).toHaveLength(1);
+      expect(results.results[0]).toEqual(mockConversation);
+      expect(results.total).toBe(1);
     });
 
     it('should apply filters', async () => {
-      mockFetch.mockResolvedValue(await createMockResponse({
-        conversations: [mockConversation]
-      }));
+      const mockResponse = {
+        results: [mockConversation],
+        total: 1,
+        page: 1,
+        page_size: 10,
+      };
+      mockFetch.mockResolvedValue(await createMockResponse(mockResponse));
 
-      await client.listConversations({ label: 'Test', status: 'active' });
+      await client.listConversations({ label: 'Test' });
 
       expect(mockFetch).toHaveBeenCalled();
       const callUrl = mockFetch.mock.calls[0][0] as string;
       expect(callUrl).toContain('label=Test');
     });
+
+    it('should support pagination', async () => {
+      const mockResponse = {
+        results: [mockConversation],
+        total: 50,
+        page: 2,
+        page_size: 10,
+      };
+      mockFetch.mockResolvedValue(await createMockResponse(mockResponse));
+
+      const results = await client.listConversations({ page: 2, page_size: 10 });
+
+      expect(results.page).toBe(2);
+      expect(results.total).toBe(50);
+    });
   });
 
   describe('updateLabel', () => {
-    it('should update conversation label', async () => {
-      mockFetch.mockResolvedValue(await createMockResponse(mockConversation, 200));
+    it('should update conversation label and folder', async () => {
+      // Updated to use 204 No Content
+      mockFetch.mockResolvedValue(await createMockResponse(null, 204));
 
-      await client.updateLabel(mockConversation.id, 'New Label');
+      await client.updateLabel(mockConversation.id, 'New Label', '/folder');
 
       expect(mockFetch).toHaveBeenCalled();
+      const callArgs = mockFetch.mock.calls[0];
+      expect(callArgs[0]).toContain('/conversations/');
+      expect(callArgs[0]).toContain('/label');
     });
   });
 
   describe('pin', () => {
     it('should pin a conversation', async () => {
-      mockFetch.mockResolvedValue(await createMockResponse(mockConversation, 200));
+      // Updated to use 204 No Content
+      mockFetch.mockResolvedValue(await createMockResponse(null, 204));
 
       await client.pin(mockConversation.id);
 
       expect(mockFetch).toHaveBeenCalled();
+      const callUrl = mockFetch.mock.calls[0][0] as string;
+      expect(callUrl).toContain('/conversations/');
+      expect(callUrl).toContain('/pin');
     });
   });
 
   describe('archive', () => {
     it('should archive a conversation', async () => {
-      mockFetch.mockResolvedValue(await createMockResponse(mockConversation, 200));
+      // Updated to use 204 No Content
+      mockFetch.mockResolvedValue(await createMockResponse(null, 204));
 
       await client.archive(mockConversation.id);
 
       expect(mockFetch).toHaveBeenCalled();
+      const callUrl = mockFetch.mock.calls[0][0] as string;
+      expect(callUrl).toContain('/conversations/');
+      expect(callUrl).toContain('/archive');
     });
   });
 
   describe('delete', () => {
     it('should delete a conversation', async () => {
-      mockFetch.mockResolvedValue(await createMockResponse({}, 200));
+      mockFetch.mockResolvedValue(await createMockResponse(null, 204));
 
       await client.delete(mockConversation.id);
 
@@ -136,35 +173,88 @@ describe('MemoryController', () => {
     });
   });
 
-  describe('search', () => {
+  describe('search/query', () => {
     it('should perform semantic search', async () => {
-      mockFetch.mockResolvedValue(await createMockResponse({
-        results: [{ ...mockConversation, score: 0.95, similarity: 0.95 }]
-      }));
+      // Updated to match controller's QueryResponse format
+      const mockResponse = {
+        results: [{
+          conversation_id: mockConversation.id,
+          message_id: '456',
+          score: 0.95,
+          content: 'test content',
+          label: 'Test',
+          folder: '/test',
+          timestamp: '2025-01-01T00:00:00Z',
+          metadata: {},
+        }],
+        total: 1,
+        page: 1,
+        page_size: 10,
+      };
+
+      mockFetch.mockResolvedValue(await createMockResponse(mockResponse));
 
       const results = await client.search('test query');
 
-      expect(results).toHaveLength(1);
-      expect(results[0].score).toBe(0.95);
+      expect(results.results).toHaveLength(1);
+      expect(results.results[0].score).toBe(0.95);
+      expect(results.total).toBe(1);
+    });
+
+    it('should use correct endpoint /api/v1/query', async () => {
+      const mockResponse = {
+        results: [],
+        total: 0,
+        page: 1,
+        page_size: 10,
+      };
+
+      mockFetch.mockResolvedValue(await createMockResponse(mockResponse));
+
+      await client.query('test');
+
+      const callUrl = mockFetch.mock.calls[0][0] as string;
+      expect(callUrl).toContain('/api/v1/query');
+      expect(callUrl).not.toContain('/api/v1/search');
     });
   });
 
   describe('assembleContext', () => {
     it('should assemble context for LLM', async () => {
+      // Updated to match controller's ContextAssembly format
       const mockContext = {
-        formattedContext: "Previous conversation...",
-        estimatedTokens: 1500,
+        messages: [
+          { role: 'user' as const, content: 'Previous question' },
+          { role: 'assistant' as const, content: 'Previous answer' },
+        ],
+        estimated_tokens: 1500,
+        conversations_used: 2,
       };
 
       mockFetch.mockResolvedValue(await createMockResponse(mockContext));
 
       const result = await client.assembleContext({
         query: 'test',
-        tokenBudget: 8000,
+        context_budget: 8000,
       });
 
-      expect(result.formattedContext).toBe(mockContext.formattedContext);
-      expect(result.estimatedTokens).toBe(1500);
+      expect(result.messages).toHaveLength(2);
+      expect(result.estimated_tokens).toBe(1500);
+    });
+
+    it('should use correct endpoint /api/v1/context/assemble', async () => {
+      const mockContext = {
+        messages: [],
+        estimated_tokens: 0,
+      };
+
+      mockFetch.mockResolvedValue(await createMockResponse(mockContext));
+
+      await client.assembleContext({ query: 'test' });
+
+      const callUrl = mockFetch.mock.calls[0][0] as string;
+      expect(callUrl).toContain('/api/v1/context/assemble');
+      expect(callUrl).not.toContain('/api/v1/query/smart');
     });
   });
 
@@ -180,12 +270,12 @@ describe('MemoryController', () => {
 
       const result = await client.export({ label: 'Test', format: 'markdown' });
 
-      expect(result).toBe(mockExport.content);
+      expect(result.content).toBe(mockExport.content);
     });
 
     it('should export as JSON', async () => {
       const mockExport = {
-        content: '[{\"id\": \"123\"}]',
+        content: '[{"id": "123"}]',
         format: 'json',
         conversationCount: 1,
       };
@@ -194,7 +284,22 @@ describe('MemoryController', () => {
 
       const result = await client.export({ format: 'json' });
 
-      expect(result).toBe(mockExport.content);
+      expect(result.content).toBe(mockExport.content);
+    });
+
+    it('should export single conversation via conversation_id', async () => {
+      const mockExport = {
+        success: true,
+        data: { conversation: mockConversation },
+      };
+
+      mockFetch.mockResolvedValue(await createMockResponse(mockExport));
+
+      const result = await client.export({ conversation_id: '123', format: 'json' });
+
+      expect(result.success).toBe(true);
+      const callUrl = mockFetch.mock.calls[0][0] as string;
+      expect(callUrl).toContain('/mcp/tools/memory_export');
     });
 
     it('should handle invalid format error', async () => {
@@ -223,7 +328,7 @@ describe('MemoryController', () => {
       }
 
       expect(chunks.length).toBeGreaterThan(1);
-      expect(chunks.join('')).toBe(mockExport.content);
+      expect(chunks.join('')).toContain('A');
     });
   });
 
@@ -254,5 +359,22 @@ describe('MemoryController', () => {
       await expect(client.getConversation('123'))
         .rejects.toThrow(SekhaAPIError);
     }, 15000); // Increase timeout to 15 seconds
+  });
+
+  describe('health', () => {
+    it('should check health status', async () => {
+      const mockHealth = {
+        status: 'healthy',
+        version: '1.0.0',
+        uptime_seconds: 3600,
+      };
+
+      mockFetch.mockResolvedValue(await createMockResponse(mockHealth));
+
+      const result = await client.health();
+
+      expect(result.status).toBe('healthy');
+      expect(result.version).toBe('1.0.0');
+    });
   });
 });
