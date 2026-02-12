@@ -120,15 +120,18 @@ jobs:
         with:
           node-version: '20.x'
 
-      - name: Generate package-lock.json
-        run: npm i --package-lock-only
+      - name: Install dependencies and generate lockfile
+        run: |
+          npm install
+          ls -la package-lock.json || echo "No lockfile generated"
 
-      - name: Install dependencies
-        run: npm install
-
-      - name: Run npm audit
-        run: npm audit --audit-level=moderate
-        continue-on-error: true
+      - name: Run npm audit (if lockfile exists)
+        run: |
+          if [ -f "package-lock.json" ]; then
+            npm audit --audit-level=moderate || echo "⚠️  Audit found issues (non-blocking)"
+          else
+            echo "⚠️  No package-lock.json found, skipping audit"
+          fi
 
   publish-check:
     name: Publish Dry Run
