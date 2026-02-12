@@ -33,7 +33,6 @@ describe('API Endpoint Fixes', () => {
       fetchMock.mockResolvedValue(await createMockResponse(mockResults));
       await client.query('test query', { limit: 10 });
 
-      // FIXED: uses /api/v1/query
       expect(fetchMock).toHaveBeenCalledWith(
         'http://localhost:8080/api/v1/query',
         expect.objectContaining({
@@ -55,7 +54,6 @@ describe('API Endpoint Fixes', () => {
         context_budget: 8000,
       });
 
-      // FIXED: uses /api/v1/context/assemble with context_budget
       expect(fetchMock).toHaveBeenCalledWith(
         'http://localhost:8080/api/v1/context/assemble',
         expect.objectContaining({
@@ -83,7 +81,6 @@ describe('API Endpoint Fixes', () => {
       fetchMock.mockResolvedValue(await createMockResponse(mockSuggestions));
       await client.getPruningSuggestions(30, 5.0);
 
-      // FIXED: uses /api/v1/prune/dry-run
       expect(fetchMock).toHaveBeenCalledWith(
         'http://localhost:8080/api/v1/prune/dry-run',
         expect.objectContaining({
@@ -100,7 +97,6 @@ describe('API Endpoint Fixes', () => {
       fetchMock.mockResolvedValue(await createMockResponse({}, 204));
       await client.updateLabel('123', 'New Label', '/folder');
 
-      // FIXED: uses /api/v1/conversations/{id}/label
       expect(fetchMock).toHaveBeenCalledWith(
         'http://localhost:8080/api/v1/conversations/123/label',
         expect.objectContaining({
@@ -114,7 +110,6 @@ describe('API Endpoint Fixes', () => {
       fetchMock.mockResolvedValue(await createMockResponse({}, 204));
       await client.pin('123');
 
-      // FIXED: uses /api/v1/conversations/{id}/pin
       expect(fetchMock).toHaveBeenCalledWith(
         'http://localhost:8080/api/v1/conversations/123/pin',
         expect.objectContaining({ method: 'PUT' })
@@ -125,7 +120,6 @@ describe('API Endpoint Fixes', () => {
       fetchMock.mockResolvedValue(await createMockResponse({}, 204));
       await client.archive('123');
 
-      // FIXED: uses /api/v1/conversations/{id}/archive
       expect(fetchMock).toHaveBeenCalledWith(
         'http://localhost:8080/api/v1/conversations/123/archive',
         expect.objectContaining({ method: 'PUT' })
@@ -138,7 +132,6 @@ describe('API Endpoint Fixes', () => {
       fetchMock.mockResolvedValue(await createMockResponse({}, 204));
       await client.update('123', { label: 'New', folder: '/new' });
 
-      // FIXED: routes to updateLabel which uses /label endpoint
       expect(fetchMock).toHaveBeenCalledWith(
         'http://localhost:8080/api/v1/conversations/123/label',
         expect.objectContaining({
@@ -151,7 +144,6 @@ describe('API Endpoint Fixes', () => {
       fetchMock.mockResolvedValue(await createMockResponse({}, 204));
       await client.update('123', { folder: '/only-folder' });
 
-      // FIXED: routes to updateFolder which uses /folder endpoint
       expect(fetchMock).toHaveBeenCalledWith(
         'http://localhost:8080/api/v1/conversations/123/folder',
         expect.objectContaining({
@@ -193,7 +185,6 @@ describe('API Endpoint Fixes', () => {
 
       const suggestions = await client.getPruningSuggestions(60, 5.0);
 
-      // FIXED: getPruningSuggestions returns PruneResponse object
       expect(suggestions.suggestions.length).toBe(2);
 
       fetchMock.mockResolvedValueOnce(await createMockResponse({}, 204));
@@ -215,8 +206,8 @@ describe('API Endpoint Fixes', () => {
 
       const result = await client.pin('123');
 
-      // FIXED: 204 returns {} (not null/undefined)
-      expect(result).toEqual({});
+      // FIXED: pin() returns Promise<void>, so result is undefined
+      expect(result).toBeUndefined();
     });
 
     it('should handle 202 Accepted responses', async () => {
@@ -224,8 +215,8 @@ describe('API Endpoint Fixes', () => {
 
       const result = await client.rebuildEmbeddings();
 
-      // FIXED: 202 returns {}
-      expect(result).toEqual({});
+      // FIXED: rebuildEmbeddings() returns Promise<void>, so result is undefined
+      expect(result).toBeUndefined();
     });
   });
 });
