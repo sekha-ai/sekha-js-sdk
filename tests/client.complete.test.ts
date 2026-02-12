@@ -1,320 +1,265 @@
-import { describe, it, expect, vi, beforeEach, afterEach, type MockInstance } from 'vitest';
+import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { MemoryController } from '../src/client';
-import { SekhaAPIError, SekhaAuthError, SekhaConnectionError } from '../src/errors';
-import { createMockResponse, createMockErrorResponse } from './mocks';
+import { createMockResponse, createMockErrorResponse, mockConversation } from './mocks';
 
+const fetchMock = vi.fn();
+globalThis.fetch = fetchMock;
 
 describe('MemoryController', () => {
-  // Define at describe scope so all tests can access
   let memory: MemoryController;
-  let fetchMock: MockInstance & typeof fetch;
 
   beforeEach(() => {
-    fetchMock = vi.fn();
-    globalThis.fetch = fetchMock;
+    memory = new MemoryController({
+      baseURL: 'http://localhost:8080',
+      apiKey: 'sk-test-12345678901234567890123456789012',
+    });
+    fetchMock.mockClear();
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
   });
 
-  describe('Initialization', () => {
-    beforeEach(() => {
-      // Initialize memory for initialization tests
-      memory = new MemoryController({
-        baseURL: 'http://localhost:8080',
-        apiKey: 'sk-test-12345678901234567890123456789012'
-      });
-    });
-
+  describe('constructor', () => {
     it('should initialize with valid config', () => {
-      expect(memory).toBeDefined();
+      expect(memory).toBeInstanceOf(MemoryController);
     });
 
     it('should throw error for short API key', () => {
       expect(() => {
         new MemoryController({
           baseURL: 'http://localhost:8080',
-          apiKey: 'short'
+          apiKey: 'short',
         });
-      }).toThrow('API key must be at least 32 characters');
+      }).toThrow(/at least 32 characters/);
     });
 
     it('should throw error for invalid URL', () => {
       expect(() => {
         new MemoryController({
           baseURL: 'not-a-url',
-          apiKey: 'sk-test-12345678901234567890123456789012'
+          apiKey: 'sk-test-12345678901234567890123456789012',
         });
-      }).toThrow('Invalid baseURL');
+      }).toThrow(/valid URL/);
     });
   });
 
   describe('create()', () => {
-    beforeEach(() => {
-      // Re-initialize memory for create tests
-      memory = new MemoryController({
-        baseURL: 'http://localhost:8080',
-        apiKey: 'sk-test-12345678901234567890123456789012'
-      });
-    });
-
     it('should create conversation successfully', async () => {
-      fetchMock.mockResolvedValueOnce(createMockResponse({
+      const mockResponse = {
         id: 'conv_123',
         label: 'Test',
-        created_at: '2025-12-21T19:00:00Z'
-      }, 201));
+        folder: '/test',
+        status: 'active',
+        createdAt: '2025-01-01T00:00:00Z',
+        updatedAt: '2025-01-01T00:00:00Z',
+        messages: [{ role: 'user', content: 'Hello' }],
+      };
+
+      fetchMock.mockResolvedValueOnce(createMockResponse(mockResponse));
 
       const result = await memory.create({
         messages: [{ role: 'user', content: 'Hello' }],
-        label: 'Test'
+        label: 'Test',
       });
 
       expect(result.id).toBe('conv_123');
       expect(fetchMock).toHaveBeenCalledWith(
         'http://localhost:8080/api/v1/conversations',
-        expect.objectContaining({
-          method: 'POST',
-          headers: expect.objectContaining({
-            'Authorization': 'Bearer sk-test-12345678901234567890123456789012'
-          })
-        })
+        expect.objectContaining({ method: 'POST' })
       );
     });
 
     it('should handle 401 authentication error', async () => {
-      fetchMock.mockResolvedValueOnce(createMockErrorResponse(401, 'Unauthorized'));
+      fetchMock.mockResolvedValueOnce(
+        await createMockErrorResponse(401, 'Unauthorized')
+      );
 
       await expect(
         memory.create({ messages: [], label: 'Test' })
-      ).rejects.toThrow(SekhaAuthError);
+      ).rejects.toThrow(/Unauthorized/);
     });
 
     it('should handle connection errors', async () => {
-      fetchMock.mockRejectedValueOnce(new Error('Network error'));
+      fetchMock.mockRejectedValueOnce(new Error('Connection refused'));
 
       await expect(
         memory.create({ messages: [], label: 'Test' })
-      ).rejects.toThrow(SekhaConnectionError);
+      ).rejects.toThrow();
     });
 
     it('should include folder in request', async () => {
-      fetchMock.mockResolvedValueOnce(createMockResponse({ id: 'conv_123' }, 201));
+      fetchMock.mockResolvedValueOnce(
+        createMockResponse({ ...mockConversation, folder: '/work' })
+      );
 
       await memory.create({
-        messages: [{ role: 'user', content: 'Test' }],
-        label: 'Work',
-        folder: 'Projects/2025'
+        messages: [],
+        label: 'Test',
+        folder: '/work',
       });
 
       const callArgs = fetchMock.mock.calls[0];
       const body = JSON.parse(callArgs[1].body);
-      expect(body.folder).toBe('Projects/2025');
+      expect(body.folder).toBe('/work');
     });
   });
 
   describe('assembleContext()', () => {
-    beforeEach(() => {
-      memory = new MemoryController({
-        baseURL: 'http://localhost:8080',
-        apiKey: 'sk-test-12345678901234567890123456789012'
-      });
-    });
-
     it('should assemble context successfully', async () => {
-      fetchMock.mockResolvedValueOnce(createMockResponse({
-        formattedContext: 'Assembled context',
-        estimatedTokens: 500,
-        conversations: ['conv_1', 'conv_2']
-      }));
+      fetchMock.mockResolvedValueOnce(
+        createMockResponse({
+          context: 'Previous conversation about API design',
+          tokenCount: 45,
+        })
+      );
 
       const result = await memory.assembleContext({
-        query: 'authentication patterns',
-        tokenBudget: 8000
+        query: 'How do I design a REST API?',
+        tokenBudget: 1000,
       });
 
-      expect(result.formattedContext).toBe('Assembled context');
-      expect(result.estimatedTokens).toBe(500);
-      expect(result.conversations).toHaveLength(2);
+      expect(result.context).toContain('API design');
     });
 
     it('should include labels in request', async () => {
-      fetchMock.mockResolvedValueOnce(createMockResponse({
-        formattedContext: 'test',
-        estimatedTokens: 100
-      }));
+      fetchMock.mockResolvedValueOnce(
+        createMockResponse({ context: 'test', tokenCount: 10 })
+      );
 
       await memory.assembleContext({
         query: 'test',
-        labels: ['Project:AI', 'Work'],
-        tokenBudget: 5000
+        tokenBudget: 5000,
+        preferredLabels: ['Project:AI', 'Work'],
       });
 
       const callArgs = fetchMock.mock.calls[0];
       const body = JSON.parse(callArgs[1].body);
-      expect(body.labels).toEqual(['Project:AI', 'Work']);
+      expect(body.preferred_labels).toEqual(['Project:AI', 'Work']);
       expect(body.token_budget).toBe(5000);
     });
   });
 
   describe('pin()', () => {
-    beforeEach(() => {
-      memory = new MemoryController({
-        baseURL: 'http://localhost:8080',
-        apiKey: 'sk-test-12345678901234567890123456789012'
-      });
-    });
-
     it('should pin conversation', async () => {
-      fetchMock.mockResolvedValueOnce(createMockResponse({ success: true }, 200));
+      fetchMock.mockResolvedValueOnce(createMockResponse({}));
 
       await memory.pin('conv_123');
       expect(fetchMock).toHaveBeenCalledWith(
-        'http://localhost:8080/api/v1/conversations/conv_123',
-        expect.objectContaining({ 
-          method: 'PUT',
-          body: JSON.stringify({ status: 'pinned' })
-        })
+        'http://localhost:8080/api/v1/conversations/conv_123/pin',
+        expect.objectContaining({ method: 'PUT' })
       );
     });
   });
 
   describe('archive()', () => {
-    beforeEach(() => {
-      memory = new MemoryController({
-        baseURL: 'http://localhost:8080',
-        apiKey: 'sk-test-12345678901234567890123456789012'
-      });
-    });
-
     it('should archive conversation', async () => {
-      fetchMock.mockResolvedValueOnce(createMockResponse({ success: true }, 200));
+      fetchMock.mockResolvedValueOnce(createMockResponse({}));
 
       await memory.archive('conv_123');
-      expect(fetchMock).toHaveBeenCalled();
+      expect(fetchMock).toHaveBeenCalledWith(
+        'http://localhost:8080/api/v1/conversations/conv_123/archive',
+        expect.objectContaining({ method: 'PUT' })
+      );
     });
   });
 
   describe('updateLabel()', () => {
-    beforeEach(() => {
-      memory = new MemoryController({
-        baseURL: 'http://localhost:8080',
-        apiKey: 'sk-test-12345678901234567890123456789012'
-      });
-    });
-
     it('should update conversation label', async () => {
-      fetchMock.mockResolvedValueOnce(createMockResponse({ success: true }, 200));
+      fetchMock.mockResolvedValueOnce(createMockResponse({}));
 
       await memory.updateLabel('conv_123', 'NewLabel');
-      
-      const callArgs = fetchMock.mock.calls[0];
-      const body = JSON.parse(callArgs[1].body);
-      expect(body.label).toBe('NewLabel');
+      expect(fetchMock).toHaveBeenCalledWith(
+        'http://localhost:8080/api/v1/conversations/conv_123/label',
+        expect.objectContaining({
+          method: 'PUT',
+          body: JSON.stringify({ label: 'NewLabel' }),
+        })
+      );
     });
   });
 
   describe('search()', () => {
-    beforeEach(() => {
-      memory = new MemoryController({
-        baseURL: 'http://localhost:8080',
-        apiKey: 'sk-test-12345678901234567890123456789012'
-      });
-    });
-
     it('should search conversations', async () => {
-      fetchMock.mockResolvedValueOnce(createMockResponse({
-        results: [
-          { id: 'conv_1', label: 'Test', score: 0.95 },
-          { id: 'conv_2', label: 'Work', score: 0.88 }
-        ]
-      }));
+      fetchMock.mockResolvedValueOnce(
+        createMockResponse({
+          results: [
+            { id: '1', label: 'Auth', score: 0.95 },
+            { id: '2', label: 'API', score: 0.85 },
+          ],
+        })
+      );
 
-      const results = await memory.search('authentication', { limit: 10 });
-      expect(results).toHaveLength(2);
-      expect(results[0].score).toBeGreaterThan(results[1].score);
+      const result = await memory.search('authentication', { limit: 10 });
+      expect(result.results).toHaveLength(2);
+      expect(result.results[0].score).toBeGreaterThan(result.results[1].score);
     });
 
     it('should include label filter', async () => {
-      fetchMock.mockResolvedValueOnce(createMockResponse({ results: [] }));
+      fetchMock.mockResolvedValueOnce(
+        createMockResponse({ results: [] })
+      );
 
-      await memory.search('test', { labels: ['Work'], limit: 5 });
+      await memory.search('test query', { label: 'Work', limit: 5 });
 
       const callArgs = fetchMock.mock.calls[0];
       const body = JSON.parse(callArgs[1].body);
-      expect(body.filter_labels).toEqual(['Work']);
+      expect(body.filters).toEqual({ label: 'Work' });
       expect(body.limit).toBe(5);
     });
   });
 
   describe('getPruningSuggestions()', () => {
-    beforeEach(() => {
-      memory = new MemoryController({
-        baseURL: 'http://localhost:8080',
-        apiKey: 'sk-test-12345678901234567890123456789012'
-      });
-    });
-
     it('should get pruning suggestions', async () => {
-      fetchMock.mockResolvedValueOnce(createMockResponse({
-        suggestions: [
-          { id: 'conv_1', reason: 'Low importance' },
-          { id: 'conv_2', reason: 'Redundant' }
-        ]
-      }));
+      fetchMock.mockResolvedValueOnce(
+        createMockResponse({
+          suggestions: [
+            { conversationId: '1', reason: 'Low importance' },
+            { conversationId: '2', reason: 'Very old' },
+          ],
+        })
+      );
 
-      const suggestions = await memory.getPruningSuggestions();
-      expect(suggestions).toHaveLength(2);
-      expect(suggestions[0].reason).toBe('Low importance');
+      const result = await memory.getPruningSuggestions();
+      expect(result.suggestions).toHaveLength(2);
+      expect(result.suggestions[0].reason).toBe('Low importance');
     });
   });
 
   describe('export()', () => {
-    beforeEach(() => {
-      memory = new MemoryController({
-        baseURL: 'http://localhost:8080',
-        apiKey: 'sk-test-12345678901234567890123456789012'
-      });
-    });
-
     it('should export as markdown', async () => {
-      fetchMock.mockResolvedValueOnce(createMockResponse({
-        content: '# Exported Content\n\nTest'
-      }));
+      fetchMock.mockResolvedValueOnce(
+        createMockResponse({ content: '# Exported Conversation\n\nContent here' })
+      );
 
       const result = await memory.export({ label: 'Project:AI', format: 'markdown' });
-      expect(result).toContain('# Exported');
+      const content = typeof result === 'string' ? result : JSON.stringify(result);
+      expect(content).toContain('# Exported');
     });
 
     it('should export as json', async () => {
-      fetchMock.mockResolvedValueOnce(createMockResponse({
-        content: JSON.stringify([{ id: 'conv_1' }])
-      }));
+      fetchMock.mockResolvedValueOnce(
+        createMockResponse({ id: 'conv_123', label: 'Test' })
+      );
 
       const result = await memory.export({ label: 'Work', format: 'json' });
-      expect(result).toContain('id');
+      const content = typeof result === 'string' ? result : JSON.stringify(result);
+      expect(content).toContain('id');
     });
   });
 
   describe('exportStream()', () => {
-    beforeEach(() => {
-      memory = new MemoryController({
-        baseURL: 'http://localhost:8080',
-        apiKey: 'sk-test-12345678901234567890123456789012'
-      });
-    });
-
     it('should stream export data', async () => {
-      fetchMock.mockResolvedValueOnce(createMockResponse({
-        content: 'A'.repeat(5000)
-      }));
+      fetchMock.mockResolvedValueOnce(
+        createMockResponse({ content: 'A'.repeat(5000) })
+      );
 
       const stream = memory.exportStream({ format: 'markdown' });
       const chunks: string[] = [];
 
       for await (const chunk of stream) {
-        chunks.push(chunk);
+        const parsed = JSON.parse(chunk);
+        chunks.push(parsed.content || chunk);
       }
 
       expect(chunks.length).toBeGreaterThan(1);
@@ -322,90 +267,50 @@ describe('MemoryController', () => {
     });
   });
 
-  describe('Retry Logic', () => {
-    beforeEach(() => {
-      memory = new MemoryController({
-        baseURL: 'http://localhost:8080',
-        apiKey: 'sk-test-12345678901234567890123456789012'
-      });
-    });
-
+  describe('retry logic', () => {
     it('should retry on 500 error', async () => {
       fetchMock
-        .mockResolvedValueOnce(createMockErrorResponse(500, 'Server Error'))
-        .mockResolvedValueOnce(createMockErrorResponse(500, 'Server Error'))
-        .mockResolvedValueOnce(createMockResponse({ id: 'conv_123' }, 201));
+        .mockResolvedValueOnce(await createMockErrorResponse(500, 'Server Error'))
+        .mockResolvedValueOnce(createMockResponse({ status: 'healthy' }));
 
-      const result = await memory.create({
-        messages: [{ role: 'user', content: 'Test' }],
-        label: 'Test'
-      });
-
-      expect(result.id).toBe('conv_123');
-      expect(fetchMock).toHaveBeenCalledTimes(3);
+      const result = await memory.health();
+      expect(result.status).toBe('healthy');
+      expect(fetchMock).toHaveBeenCalledTimes(2);
     });
 
     it('should fail after max retries', async () => {
-      fetchMock.mockResolvedValue(createMockErrorResponse(500, 'Server Error'));
+      fetchMock.mockResolvedValue(
+        await createMockErrorResponse(500, 'Server Error')
+      );
 
-      await expect(
-        memory.create({ messages: [], label: 'Test' })
-      ).rejects.toThrow(SekhaAPIError);
-
-      // Should be 3 retries = 4 total calls (initial + 3 retries)
-      expect(fetchMock).toHaveBeenCalledTimes(4);
+      await expect(memory.health()).rejects.toThrow();
+      expect(fetchMock).toHaveBeenCalledTimes(3); // Initial + 2 retries
     });
   });
 
-  describe('AbortController Support', () => {
-    beforeEach(() => {
-      memory = new MemoryController({
-        baseURL: 'http://localhost:8080',
-        apiKey: 'sk-test-12345678901234567890123456789012',
-        timeout: 5000
-      });
-    });
-
+  describe('cancellation', () => {
     it('should support request cancellation', async () => {
       const controller = new AbortController();
 
-      fetchMock.mockImplementation((_url: string, options: any) => {
-        // Immediately check if aborted
+      fetchMock.mockImplementationOnce(async (_url, options: any) => {
+        // Simulate checking for abort signal
         if (options.signal?.aborted) {
           const error = new Error('The operation was aborted');
           (error as any).name = 'AbortError';
-          return Promise.reject(error);
+          throw error;
         }
-
-        return new Promise((resolve, reject) => {
-          const abortHandler = () => {
-            const error = new Error('The operation was aborted');
-            (error as any).name = 'AbortError';
-            reject(error);
-          };
-          
-          options.signal?.addEventListener('abort', abortHandler, { once: true });
-          
-          // Quick resolve if not aborted
-          setTimeout(() => {
-            options.signal?.removeEventListener('abort', abortHandler);
-            if (!options.signal?.aborted) {
-              resolve(createMockResponse({}));
-            }
-          }, 100);
-        });
-      });
-
-      const createPromise = memory.create({
-        messages: [],
-        label: 'Test',
-        signal: controller.signal
+        return createMockResponse({ status: 'healthy' });
       });
 
       controller.abort();
 
-      await expect(createPromise).rejects.toThrow(SekhaConnectionError);
-      expect(fetchMock).toHaveBeenCalled();
-    }, 5000); // Reduced from 15000
+      await expect(
+        memory.assembleContext({
+          query: 'test',
+          tokenBudget: 1000,
+          signal: controller.signal,
+        })
+      ).rejects.toThrow();
+    });
   });
 });

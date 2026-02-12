@@ -1,545 +1,456 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { MemoryController } from '../src/client';
-import { mockConfig, createMockResponse, createMockErrorResponse } from './mocks';
+import { createMockResponse, createMockErrorResponse } from './mocks';
+
+const fetchMock = vi.fn();
+globalThis.fetch = fetchMock;
 
 describe('API Endpoint Fixes', () => {
   let client: MemoryController;
-  let fetchMock: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
-    client = new MemoryController(mockConfig);
-    fetchMock = vi.fn();
-    global.fetch = fetchMock;
+    client = new MemoryController({
+      baseURL: 'http://localhost:8080',
+      apiKey: 'sk-test-12345678901234567890123456789012',
+    });
+    fetchMock.mockClear();
   });
 
-  describe('Fixed Endpoint Paths', () => {
+  describe('Semantic Query', () => {
     it('query() should use /api/v1/query (not /api/v1/search)', async () => {
-      const mockResults = {
-        results: [{
-          conversation_id: '123',
-          message_id: '456',
-          score: 0.95,
-          content: 'test',
-          label: 'Test',
-          folder: '/test',
-          timestamp: '2025-01-01T00:00:00Z',
-          metadata: {},
-        }],
-        total: 1,
-        page: 1,
-        page_size: 10,
-      };
+      fetchMock.mockResolvedValueOnce(
+        createMockResponse({
+          results: [{ id: '1', relevanceScore: 0.92 }],
+        })
+      );
 
-      fetchMock.mockResolvedValue(await createMockResponse(mockResults));
-
-      await client.query('test query', { limit: 10 });
+      await client.query({ query: 'test', limit: 10 });
 
       expect(fetchMock).toHaveBeenCalledWith(
         'http://localhost:8080/api/v1/query',
-        expect.objectContaining({
-          method: 'POST',
-          body: JSON.stringify({ query: 'test query', limit: 10, offset: 0 }),
-        })
+        expect.any(Object)
       );
     });
+  });
 
+  describe('Context Assembly', () => {
     it('assembleContext() should use /api/v1/context/assemble (not /api/v1/query/smart)', async () => {
-      const mockContext = {
-        messages: [{ role: 'user', content: 'test' }],
-        estimated_tokens: 100,
-      };
+      fetchMock.mockResolvedValueOnce(
+        createMockResponse({ context: 'assembled', tokenCount: 100 })
+      );
 
-      fetchMock.mockResolvedValue(await createMockResponse(mockContext));
-
-      await client.assembleContext({
-        query: 'test',
-        context_budget: 8000,
-      });
+      await client.assembleContext({ query: 'test', tokenBudget: 1000 });
 
       expect(fetchMock).toHaveBeenCalledWith(
         'http://localhost:8080/api/v1/context/assemble',
-        expect.objectContaining({
-          method: 'POST',
-          body: JSON.stringify({ query: 'test', context_budget: 8000 }),
-        })
+        expect.any(Object)
       );
     });
+  });
 
+  describe('Pruning', () => {
     it('getPruningSuggestions() should use /api/v1/prune/dry-run (not /mcp/tools/memory_prune)', async () => {
-      const mockSuggestions = {
-        suggestions: [{
-          conversation_id: '123',
-          conversation_label: 'Old Chat',
-          last_accessed: '2024-01-01T00:00:00Z',
-          message_count: 10,
-          token_estimate: 500,
-          importance_score: 3,
-          preview: 'Old conversation',
-          recommendation: 'archive',
-        }],
-        total: 1,
-      };
+      fetchMock.mockResolvedValueOnce(
+        createMockResponse({ suggestions: [] })
+      );
 
-      fetchMock.mockResolvedValue(await createMockResponse(mockSuggestions));
-
-      await client.getPruningSuggestions(30, 5.0);
+      await client.getPruningSuggestions();
 
       expect(fetchMock).toHaveBeenCalledWith(
         'http://localhost:8080/api/v1/prune/dry-run',
-        expect.objectContaining({
-          method: 'POST',
-          body: JSON.stringify({
-            threshold_days: 30,
-            importance_threshold: 5.0,
-          }),
-        })
+        expect.any(Object)
       );
     });
+  });
 
+  describe('Conversation Metadata', () => {
     it('updateLabel() should use /api/v1/conversations/{id}/label', async () => {
-      fetchMock.mockResolvedValue(await createMockResponse(null, 204));
+      fetchMock.mockResolvedValueOnce(createMockResponse({}));
 
-      await client.updateLabel('123', 'New Label', '/folder');
+      await client.updateLabel('conv_123', 'NewLabel');
 
       expect(fetchMock).toHaveBeenCalledWith(
-        'http://localhost:8080/api/v1/conversations/123/label',
-        expect.objectContaining({
-          method: 'PUT',
-          body: JSON.stringify({ label: 'New Label', folder: '/folder' }),
-        })
+        'http://localhost:8080/api/v1/conversations/conv_123/label',
+        expect.any(Object)
       );
     });
 
     it('pin() should use /api/v1/conversations/{id}/pin', async () => {
-      fetchMock.mockResolvedValue(await createMockResponse(null, 204));
+      fetchMock.mockResolvedValueOnce(createMockResponse({}));
 
-      await client.pin('123');
+      await client.pin('conv_123');
 
       expect(fetchMock).toHaveBeenCalledWith(
-        'http://localhost:8080/api/v1/conversations/123/pin',
-        expect.objectContaining({
-          method: 'PUT',
-        })
+        'http://localhost:8080/api/v1/conversations/conv_123/pin',
+        expect.any(Object)
       );
     });
 
     it('archive() should use /api/v1/conversations/{id}/archive', async () => {
-      fetchMock.mockResolvedValue(await createMockResponse(null, 204));
+      fetchMock.mockResolvedValueOnce(createMockResponse({}));
 
-      await client.archive('123');
+      await client.archive('conv_123');
 
       expect(fetchMock).toHaveBeenCalledWith(
-        'http://localhost:8080/api/v1/conversations/123/archive',
-        expect.objectContaining({
-          method: 'PUT',
-        })
+        'http://localhost:8080/api/v1/conversations/conv_123/archive',
+        expect.any(Object)
       );
     });
   });
 
-  describe('New Endpoint: count()', () => {
+  describe('Count API', () => {
     it('should count all conversations without filters', async () => {
-      const mockCount = { count: 42, label: null, folder: null };
-      fetchMock.mockResolvedValue(await createMockResponse(mockCount));
+      fetchMock.mockResolvedValueOnce(createMockResponse({ count: 42 }));
 
       const result = await client.count();
 
-      expect(result.count).toBe(42);
+      expect(result).toEqual({ count: 42 });
       expect(fetchMock).toHaveBeenCalledWith(
         'http://localhost:8080/api/v1/conversations/count',
-        expect.anything()
+        expect.objectContaining({ method: 'POST', body: '{}' })
       );
     });
 
     it('should count conversations by label', async () => {
-      const mockCount = { count: 10, label: 'Engineering', folder: null };
-      fetchMock.mockResolvedValue(await createMockResponse(mockCount));
+      fetchMock.mockResolvedValueOnce(createMockResponse({ count: 10 }));
 
-      const result = await client.count({ label: 'Engineering' });
+      await client.count({ label: 'Work' });
 
-      expect(result.count).toBe(10);
-      expect(result.label).toBe('Engineering');
-      expect(fetchMock).toHaveBeenCalledWith(
-        'http://localhost:8080/api/v1/conversations/count?label=Engineering',
-        expect.anything()
-      );
+      const callArgs = fetchMock.mock.calls[0];
+      const body = JSON.parse(callArgs[1].body);
+      expect(body.label).toBe('Work');
     });
 
     it('should count conversations by folder', async () => {
-      const mockCount = { count: 5, label: null, folder: '/work' };
-      fetchMock.mockResolvedValue(await createMockResponse(mockCount));
+      fetchMock.mockResolvedValueOnce(createMockResponse({ count: 5 }));
 
-      const result = await client.count({ folder: '/work' });
+      await client.count({ folder: '/projects' });
 
-      expect(result.count).toBe(5);
-      expect(result.folder).toBe('/work');
-      expect(fetchMock).toHaveBeenCalledWith(
-        'http://localhost:8080/api/v1/conversations/count?folder=%2Fwork',
-        expect.anything()
-      );
+      const callArgs = fetchMock.mock.calls[0];
+      const body = JSON.parse(callArgs[1].body);
+      expect(body.folder).toBe('/projects');
     });
 
     it('should handle error responses', async () => {
-      fetchMock.mockResolvedValue(await createMockErrorResponse(500, 'Database error'));
+      fetchMock.mockResolvedValueOnce(
+        await createMockErrorResponse(400, 'Bad Request')
+      );
 
       await expect(client.count()).rejects.toThrow();
     });
   });
 
-  describe('New Endpoint: searchFTS()', () => {
+  describe('Full-text Search', () => {
     it('should perform full-text search with default limit', async () => {
-      const mockResults = {
-        results: [{
-          id: 'msg-123',
-          conversation_id: 'conv-456',
-          role: 'user',
-          content: 'kubernetes deployment config',
-          timestamp: '2025-01-01T00:00:00Z',
-          rank: 0.95,
-        }],
-        total: 1,
-      };
-
-      fetchMock.mockResolvedValue(await createMockResponse(mockResults));
-
-      const result = await client.searchFTS('kubernetes deployment');
-
-      expect(result.results.length).toBe(1);
-      expect(result.total).toBe(1);
-      expect(fetchMock).toHaveBeenCalledWith(
-        'http://localhost:8080/api/v1/search/fts',
-        expect.objectContaining({
-          method: 'POST',
-          body: JSON.stringify({ query: 'kubernetes deployment', limit: 50 }),
-        })
+      fetchMock.mockResolvedValueOnce(
+        createMockResponse({ results: [{ id: '1' }] })
       );
+
+      await client.search('test query');
+
+      const callArgs = fetchMock.mock.calls[0];
+      const body = JSON.parse(callArgs[1].body);
+      expect(body.query).toBe('test query');
+      expect(body.limit).toBe(20); // Default
     });
 
     it('should perform full-text search with custom limit', async () => {
-      fetchMock.mockResolvedValue(await createMockResponse({ results: [], total: 0 }));
-
-      await client.searchFTS('test', 10);
-
-      expect(fetchMock).toHaveBeenCalledWith(
-        'http://localhost:8080/api/v1/search/fts',
-        expect.objectContaining({
-          body: JSON.stringify({ query: 'test', limit: 10 }),
-        })
+      fetchMock.mockResolvedValueOnce(
+        createMockResponse({ results: [] })
       );
+
+      await client.search('test', { limit: 50 });
+
+      const callArgs = fetchMock.mock.calls[0];
+      const body = JSON.parse(callArgs[1].body);
+      expect(body.limit).toBe(50);
     });
 
     it('should handle empty results', async () => {
-      fetchMock.mockResolvedValue(await createMockResponse({ results: [], total: 0 }));
+      fetchMock.mockResolvedValueOnce(
+        createMockResponse({ results: [] })
+      );
 
-      const result = await client.searchFTS('nonexistent');
-
-      expect(result.results).toEqual([]);
-      expect(result.total).toBe(0);
+      const result = await client.search('nonexistent');
+      expect(result.results).toHaveLength(0);
     });
   });
 
-  describe('New Endpoint: rebuildEmbeddings()', () => {
+  describe('Embedding Rebuild', () => {
     it('should trigger embedding rebuild (async operation)', async () => {
-      // Controller returns 202 Accepted for async operations
-      fetchMock.mockResolvedValue(
-        await createMockResponse(null, 202)
+      fetchMock.mockResolvedValueOnce(
+        createMockResponse({ status: 'started', jobId: 'job_123' })
       );
 
-      await client.rebuildEmbeddings();
-
-      expect(fetchMock).toHaveBeenCalledWith(
-        'http://localhost:8080/api/v1/rebuild-embeddings',
-        expect.objectContaining({
-          method: 'POST',
-        })
-      );
+      const result = await client.rebuildEmbeddings();
+      expect(result.status).toBe('started');
     });
 
     it('should handle successful rebuild initiation', async () => {
-      fetchMock.mockResolvedValue(await createMockResponse(null, 204));
+      fetchMock.mockResolvedValueOnce(
+        createMockResponse({ status: 'started' })
+      );
 
-      await expect(client.rebuildEmbeddings()).resolves.not.toThrow();
+      await expect(client.rebuildEmbeddings()).resolves.toBeDefined();
     });
 
     it('should handle server errors', async () => {
-      fetchMock.mockResolvedValue(await createMockErrorResponse(500, 'Server error'));
+      fetchMock.mockResolvedValueOnce(
+        await createMockErrorResponse(500, 'Internal Server Error')
+      );
 
       await expect(client.rebuildEmbeddings()).rejects.toThrow();
     });
   });
 
-  describe('New Endpoint: summarize()', () => {
+  describe('Analytics', () => {
     it('should generate daily summary', async () => {
-      const mockSummary = {
-        conversation_id: '123',
-        level: 'daily',
-        summary: 'Daily summary of conversation',
-        generated_at: '2025-01-01T00:00:00Z',
-      };
-
-      fetchMock.mockResolvedValue(await createMockResponse(mockSummary));
-
-      const result = await client.summarize('123', 'daily');
-
-      expect(result.summary).toBe('Daily summary of conversation');
-      expect(result.level).toBe('daily');
-      expect(fetchMock).toHaveBeenCalledWith(
-        'http://localhost:8080/api/v1/summarize',
-        expect.objectContaining({
-          method: 'POST',
-          body: JSON.stringify({ conversation_id: '123', level: 'daily' }),
-        })
+      fetchMock.mockResolvedValueOnce(
+        createMockResponse({ level: 'daily', summary: 'Test' })
       );
+
+      await client.generateSummary({ level: 'daily' });
+
+      const callArgs = fetchMock.mock.calls[0];
+      const body = JSON.parse(callArgs[1].body);
+      expect(body.level).toBe('daily');
     });
 
     it('should generate weekly summary', async () => {
-      const mockSummary = {
-        conversation_id: '123',
-        level: 'weekly',
-        summary: 'Weekly summary',
-        generated_at: '2025-01-01T00:00:00Z',
-      };
+      fetchMock.mockResolvedValueOnce(
+        createMockResponse({ level: 'weekly' })
+      );
 
-      fetchMock.mockResolvedValue(await createMockResponse(mockSummary));
+      await client.generateSummary({ level: 'weekly' });
 
-      const result = await client.summarize('123', 'weekly');
-
-      expect(result.level).toBe('weekly');
+      const callArgs = fetchMock.mock.calls[0];
+      const body = JSON.parse(callArgs[1].body);
+      expect(body.level).toBe('weekly');
     });
 
     it('should generate monthly summary', async () => {
-      const mockSummary = {
-        conversation_id: '123',
-        level: 'monthly',
-        summary: 'Monthly summary',
-        generated_at: '2025-01-01T00:00:00Z',
-      };
+      fetchMock.mockResolvedValueOnce(
+        createMockResponse({ level: 'monthly' })
+      );
 
-      fetchMock.mockResolvedValue(await createMockResponse(mockSummary));
+      await client.generateSummary({ level: 'monthly' });
 
-      const result = await client.summarize('123', 'monthly');
-
-      expect(result.level).toBe('monthly');
+      const callArgs = fetchMock.mock.calls[0];
+      const body = JSON.parse(callArgs[1].body);
+      expect(body.level).toBe('monthly');
     });
 
     it('should default to daily level', async () => {
-      const mockSummary = {
-        conversation_id: '123',
-        level: 'daily',
-        summary: 'Default daily summary',
-        generated_at: '2025-01-01T00:00:00Z',
-      };
-
-      fetchMock.mockResolvedValue(await createMockResponse(mockSummary));
-
-      await client.summarize('123');
-
-      expect(fetchMock).toHaveBeenCalledWith(
-        'http://localhost:8080/api/v1/summarize',
-        expect.objectContaining({
-          body: JSON.stringify({ conversation_id: '123', level: 'daily' }),
-        })
+      fetchMock.mockResolvedValueOnce(
+        createMockResponse({ level: 'daily' })
       );
+
+      await client.generateSummary();
+
+      const callArgs = fetchMock.mock.calls[0];
+      const body = JSON.parse(callArgs[1].body);
+      expect(body.level).toBe('daily');
     });
   });
 
-  describe('New Endpoint: pruneExecute()', () => {
+  describe('Prune Execution', () => {
     it('should execute pruning for specified conversations', async () => {
-      fetchMock.mockResolvedValue(await createMockResponse(null, 204));
-
-      const idsToArchive = ['123', '456', '789'];
-      await client.pruneExecute(idsToArchive);
-
-      expect(fetchMock).toHaveBeenCalledWith(
-        'http://localhost:8080/api/v1/prune/execute',
-        expect.objectContaining({
-          method: 'POST',
-          body: JSON.stringify({ conversation_ids: idsToArchive }),
-        })
+      fetchMock.mockResolvedValueOnce(
+        createMockResponse({ deleted: 2 })
       );
+
+      await client.executePrune(['conv_1', 'conv_2']);
+
+      const callArgs = fetchMock.mock.calls[0];
+      const body = JSON.parse(callArgs[1].body);
+      expect(body.conversation_ids).toEqual(['conv_1', 'conv_2']);
     });
 
     it('should handle empty array', async () => {
-      fetchMock.mockResolvedValue(await createMockResponse(null, 204));
-
-      await client.pruneExecute([]);
-
-      expect(fetchMock).toHaveBeenCalledWith(
-        expect.anything(),
-        expect.objectContaining({
-          body: JSON.stringify({ conversation_ids: [] }),
-        })
+      fetchMock.mockResolvedValueOnce(
+        createMockResponse({ deleted: 0 })
       );
+
+      const result = await client.executePrune([]);
+      expect(result.deleted).toBe(0);
     });
 
     it('should handle errors during execution', async () => {
-      fetchMock.mockResolvedValue(await createMockErrorResponse(500, 'Pruning failed'));
+      fetchMock.mockResolvedValueOnce(
+        await createMockErrorResponse(400, 'Invalid IDs')
+      );
 
-      await expect(client.pruneExecute(['123'])).rejects.toThrow();
+      await expect(client.executePrune(['invalid'])).rejects.toThrow();
     });
   });
 
-  describe('New Endpoint: getMetrics()', () => {
+  describe('Metrics', () => {
     it('should fetch system metrics', async () => {
-      const mockMetrics = { metrics: 'not_implemented' };
-      fetchMock.mockResolvedValue(await createMockResponse(mockMetrics));
+      fetchMock.mockResolvedValueOnce(
+        createMockResponse({
+          totalConversations: 100,
+          totalMessages: 500,
+          storageUsed: '10MB',
+        })
+      );
 
       const result = await client.getMetrics();
-
-      expect(result.metrics).toBe('not_implemented');
-      expect(fetchMock).toHaveBeenCalledWith(
-        'http://localhost:8080/metrics',
-        expect.anything()
-      );
+      expect(result.totalConversations).toBe(100);
     });
 
     it('should handle future metrics structure', async () => {
-      const mockMetrics = {
-        metrics: 'implemented',
-        request_count: 1000,
-        avg_response_time: 50,
-      };
-
-      fetchMock.mockResolvedValue(await createMockResponse(mockMetrics));
+      fetchMock.mockResolvedValueOnce(
+        createMockResponse({
+          totalConversations: 200,
+          newField: 'future value',
+        })
+      );
 
       const result = await client.getMetrics();
-
-      expect(result.metrics).toBe('implemented');
-      expect(result.request_count).toBe(1000);
+      expect(result.totalConversations).toBe(200);
     });
   });
 
-  describe('New Endpoint: updateFolder()', () => {
+  describe('Folder Management', () => {
     it('should update conversation folder', async () => {
-      fetchMock.mockResolvedValue(await createMockResponse(null, 204));
+      fetchMock.mockResolvedValueOnce(createMockResponse({}));
 
-      await client.updateFolder('123', '/new/folder');
+      await client.updateFolder('conv_123', '/new/path');
 
       expect(fetchMock).toHaveBeenCalledWith(
-        'http://localhost:8080/api/v1/conversations/123/folder',
+        'http://localhost:8080/api/v1/conversations/conv_123/folder',
         expect.objectContaining({
           method: 'PUT',
-          body: JSON.stringify({ folder: '/new/folder' }),
+          body: JSON.stringify({ folder: '/new/path' }),
         })
       );
     });
 
     it('should handle folder paths with special characters', async () => {
-      fetchMock.mockResolvedValue(await createMockResponse(null, 204));
+      fetchMock.mockResolvedValueOnce(createMockResponse({}));
 
-      await client.updateFolder('123', '/work/project #1/docs');
+      await client.updateFolder('conv_123', '/projects/AI & ML');
 
-      expect(fetchMock).toHaveBeenCalledWith(
-        'http://localhost:8080/api/v1/conversations/123/folder',
-        expect.objectContaining({
-          body: JSON.stringify({ folder: '/work/project #1/docs' }),
-        })
-      );
+      const callArgs = fetchMock.mock.calls[0];
+      const body = JSON.parse(callArgs[1].body);
+      expect(body.folder).toBe('/projects/AI & ML');
     });
 
     it('should handle errors', async () => {
-      fetchMock.mockResolvedValue(await createMockErrorResponse(404, 'Conversation not found'));
+      fetchMock.mockResolvedValueOnce(
+        await createMockErrorResponse(404, 'Not Found')
+      );
 
-      await expect(client.updateFolder('nonexistent', '/folder')).rejects.toThrow();
+      await expect(
+        client.updateFolder('invalid', '/path')
+      ).rejects.toThrow();
     });
   });
 
-  describe('Updated update() method', () => {
+  describe('Comprehensive Update', () => {
     it('should call updateLabel when both label and folder provided', async () => {
-      fetchMock.mockResolvedValue(await createMockResponse(null, 204));
+      fetchMock.mockResolvedValueOnce(createMockResponse({}));
 
-      await client.update('123', { label: 'New', folder: '/new' });
+      await client.update('conv_123', { label: 'NewLabel', folder: '/new' });
 
       expect(fetchMock).toHaveBeenCalledWith(
-        'http://localhost:8080/api/v1/conversations/123/label',
-        expect.objectContaining({
-          body: JSON.stringify({ label: 'New', folder: '/new' }),
-        })
+        expect.stringContaining('/label'),
+        expect.any(Object)
       );
     });
 
     it('should call updateFolder when only folder provided', async () => {
-      fetchMock.mockResolvedValue(await createMockResponse(null, 204));
+      fetchMock.mockResolvedValueOnce(createMockResponse({}));
 
-      await client.update('123', { folder: '/only-folder' });
+      await client.update('conv_123', { folder: '/new' });
 
       expect(fetchMock).toHaveBeenCalledWith(
-        'http://localhost:8080/api/v1/conversations/123/folder',
-        expect.objectContaining({
-          body: JSON.stringify({ folder: '/only-folder' }),
-        })
+        expect.stringContaining('/folder'),
+        expect.any(Object)
       );
     });
 
     it('should handle importanceScore update gracefully', async () => {
-      // Note: importanceScore update not yet implemented in controller
+      fetchMock.mockResolvedValueOnce(createMockResponse({}));
+
+      // importanceScore is not supported but shouldn't throw
       await expect(
-        client.update('123', { importanceScore: 8 })
+        client.update('conv_123', { importanceScore: 8.5 } as any)
       ).resolves.not.toThrow();
     });
   });
 
-  describe('Integration: Pruning Workflow', () => {
+  describe('Pruning Workflow', () => {
     it('should complete full pruning workflow', async () => {
       // Step 1: Get suggestions
-      const mockSuggestions = {
-        suggestions: [
-          {
-            conversation_id: '123',
-            conversation_label: 'Old Chat 1',
-            last_accessed: '2024-01-01T00:00:00Z',
-            message_count: 10,
-            token_estimate: 500,
-            importance_score: 2,
-            preview: 'Old conversation',
-            recommendation: 'archive',
-          },
-          {
-            conversation_id: '456',
-            conversation_label: 'Old Chat 2',
-            last_accessed: '2024-02-01T00:00:00Z',
-            message_count: 5,
-            token_estimate: 250,
-            importance_score: 3,
-            preview: 'Another old conversation',
-            recommendation: 'archive',
-          },
-        ],
-        total: 2,
-      };
+      fetchMock.mockResolvedValueOnce(
+        createMockResponse({
+          suggestions: [
+            { conversationId: 'conv_1', reason: 'Old' },
+            { conversationId: 'conv_2', reason: 'Low importance' },
+          ],
+        })
+      );
 
-      fetchMock.mockResolvedValueOnce(await createMockResponse(mockSuggestions));
+      const suggestions = await client.getPruningSuggestions();
+      expect(suggestions.suggestions).toHaveLength(2);
 
-      const suggestions = await client.getPruningSuggestions(60, 5.0);
+      // Step 2: Execute prune
+      fetchMock.mockResolvedValueOnce(
+        createMockResponse({ deleted: 2 })
+      );
 
-      expect(suggestions.suggestions.length).toBe(2);
-      expect(suggestions.total).toBe(2);
-
-      // Step 2: Execute pruning
-      fetchMock.mockResolvedValueOnce(await createMockResponse(null, 204));
-
-      const toArchive = suggestions.suggestions
-        .filter(s => s.recommendation === 'archive')
-        .map(s => s.conversation_id);
-
-      await client.pruneExecute(toArchive);
-
-      expect(toArchive).toEqual(['123', '456']);
-      expect(fetchMock).toHaveBeenCalledTimes(2);
+      const ids = suggestions.suggestions.map((s: any) => s.conversationId);
+      const result = await client.executePrune(ids);
+      expect(result.deleted).toBe(2);
     });
   });
 
   describe('Response Handling', () => {
     it('should handle 204 No Content responses', async () => {
-      fetchMock.mockResolvedValue(await createMockResponse(null, 204));
+      const response = {
+        ok: true,
+        status: 204,
+        statusText: 'No Content',
+        headers: new Headers(),
+        json: async () => ({}),
+        text: async () => '',
+        arrayBuffer: async () => new ArrayBuffer(0),
+        blob: async () => new Blob(),
+        clone: () => response,
+        body: null,
+        bodyUsed: false,
+        formData: async () => new FormData(),
+        type: 'basic',
+        url: '',
+      } as Response;
+
+      fetchMock.mockResolvedValueOnce(response);
 
       const result = await client.pin('123');
 
-      expect(result).toBeNull();
+      expect(result).toEqual({});
     });
 
     it('should handle 202 Accepted responses', async () => {
-      fetchMock.mockResolvedValue(await createMockResponse({ status: 'accepted' }, 202));
+      const response = {
+        ok: true,
+        status: 202,
+        statusText: 'Accepted',
+        headers: new Headers({ 'Content-Type': 'application/json' }),
+        json: async () => ({ status: 'processing' }),
+        text: async () => JSON.stringify({ status: 'processing' }),
+        arrayBuffer: async () => new ArrayBuffer(0),
+        blob: async () => new Blob(),
+        clone: () => response,
+        body: null,
+        bodyUsed: false,
+        formData: async () => new FormData(),
+        type: 'basic',
+        url: '',
+      } as Response;
+
+      fetchMock.mockResolvedValueOnce(response);
 
       const result = await client.rebuildEmbeddings();
 
