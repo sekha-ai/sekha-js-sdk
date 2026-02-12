@@ -21,220 +21,146 @@ Multiple methods were using incorrect API paths that didn't match the controller
 #### Type Changes
 
 - **`Conversation` interface**: Updated to match controller's exact format
-  - `messageCount` → `message_count` (snake_case)
-  - `createdAt` → `created_at` (snake_case)
-  - `folder` is now **required** (was optional)
-  - Added `word_count`, `session_count` (optional fields)
-
 - **`list()` return type**: Changed from `Conversation[]` to `QueryResponse`
-  ```typescript
-  // Old
-  const convs: Conversation[] = await memory.list();
-  
-  // New
-  const response: QueryResponse = await memory.list();
-  const convs = response.results;
-  console.log(`Total: ${response.total}, Page: ${response.page}`);
-  ```
-
 - **`query()` return type**: Changed from `SearchResult[]` to `QueryResponse`
-  ```typescript
-  // Old
-  const results: SearchResult[] = await memory.query('test');
-  
-  // New  
-  const response: QueryResponse = await memory.query('test');
-  const results = response.results;
-  ```
-
 - **`updateLabel()`**: Now **requires** `folder` parameter
-  ```typescript
-  // Old
-  await memory.updateLabel(id, 'New Label'); // ❌ Breaks
-  
-  // New
-  await memory.updateLabel(id, 'New Label', '/folder'); // ✅ Required
-  ```
 
 ### ✨ Added
+
+#### 🌟 NEW: BridgeClient (LLM Operations)
+
+Direct access to Sekha LLM Bridge for completions, embeddings, and LLM operations.
+
+**Installation:**
+```typescript
+import { BridgeClient } from '@sekha/sdk';
+
+const bridge = new BridgeClient({
+  baseURL: 'http://localhost:5001'
+});
+```
+
+**Methods:**
+- **`complete(request)`** - Chat completions (OpenAI-compatible)
+- **`streamComplete(request)`** - Streaming completions with SSE
+- **`embed(request)`** - Generate embeddings
+- **`summarize(request)`** - Hierarchical summaries
+- **`extract(request)`** - Entity extraction  
+- **`score(request)`** - Importance scoring
+- **`health()`** - Health check
+
+**Example:**
+```typescript
+// Chat completion
+const completion = await bridge.complete({
+  messages: [{ role: 'user', content: 'Explain TypeScript' }]
+});
+
+// Streaming
+for await (const chunk of bridge.streamComplete({ messages })) {
+  process.stdout.write(chunk.choices[0]?.delta?.content || '');
+}
+
+// Embeddings
+const embed = await bridge.embed({ text: 'Hello world' });
+```
+
+#### 🌟 NEW: SekhaClient (Unified Interface)
+
+Combines MemoryController, MCPClient, and BridgeClient into single interface with high-level convenience methods.
+
+**Installation:**
+```typescript
+import { SekhaClient } from '@sekha/sdk';
+
+const sekha = new SekhaClient({
+  controllerURL: 'http://localhost:8080',
+  bridgeURL: 'http://localhost:5001',
+  apiKey: 'your-api-key'
+});
+```
+
+**Direct Access to All Clients:**
+```typescript
+// Use individual clients
+await sekha.controller.list();
+await sekha.mcp.memoryStats({});
+await sekha.bridge.complete({ messages });
+```
+
+**High-Level Convenience Methods:**
+
+1. **`storeAndQuery(messages, query, options)`** - Store then search
+   ```typescript
+   const { conversation, results } = await sekha.storeAndQuery(
+     messages,
+     'TypeScript',
+     { label: 'Engineering' }
+   );
+   ```
+
+2. **`completeWithContext(prompt, contextQuery, options)`** - LLM + Memory context
+   ```typescript
+   const response = await sekha.completeWithContext(
+     'What were the main takeaways?',
+     'meeting notes'
+   );
+   console.log(response.choices[0].message.content);
+   ```
+
+3. **`completeWithMemory(prompt, searchQuery, options)`** - LLM + Search results
+   ```typescript
+   const response = await sekha.completeWithMemory(
+     'Summarize TypeScript discussion',
+     'TypeScript',
+     { limit: 5 }
+   );
+   ```
+
+4. **`embedAndStore(messages, options)`** - Custom embedding + storage
+5. **`streamWithContext(prompt, contextQuery, options)`** - Streaming with context
+6. **`healthCheck()`** - Check all services
 
 #### New REST API Endpoints
 
 1. **`count(params?: { label?: string; folder?: string })`** - Count conversations
-   ```typescript
-   const total = await memory.count();
-   const labelCount = await memory.count({ label: 'Engineering' });
-   const folderCount = await memory.count({ folder: '/work' });
-   ```
-
-2. **`searchFTS(query: string, limit?: number)`** - Full-text search using SQLite FTS5
-   ```typescript
-   const results = await memory.searchFTS('kubernetes deployment', 20);
-   results.results.forEach(msg => console.log(msg.content));
-   ```
-
-3. **`rebuildEmbeddings()`** - Rebuild all embeddings (async operation)
-   ```typescript
-   await memory.rebuildEmbeddings();
-   console.log('Embedding rebuild started in background');
-   ```
-
-4. **`summarize(conversationId: string, level: 'daily' | 'weekly' | 'monthly')`** - Generate summaries
-   ```typescript
-   const summary = await memory.summarize(id, 'weekly');
-   console.log(summary.summary);
-   ```
-
-5. **`pruneExecute(conversationIds: string[])`** - Execute pruning (archive conversations)
-   ```typescript
-   const suggestions = await memory.getPruningSuggestions(60, 5.0);
-   const toArchive = suggestions.suggestions
-     .filter(s => s.recommendation === 'archive')
-     .map(s => s.conversation_id);
-   await memory.pruneExecute(toArchive);
-   ```
-
-6. **`getMetrics()`** - Get system metrics
-   ```typescript
-   const metrics = await memory.getMetrics();
-   console.log(metrics);
-   ```
-
-7. **`updateFolder(id: string, folder: string)`** - Update conversation folder only
-   ```typescript
-   await memory.updateFolder(id, '/new/folder/path');
-   ```
+2. **`searchFTS(query: string, limit?: number)`** - Full-text search (SQLite FTS5)
+3. **`rebuildEmbeddings()`** - Rebuild all embeddings
+4. **`summarize(conversationId, level)`** - Generate summaries
+5. **`pruneExecute(conversationIds)`** - Execute pruning
+6. **`getMetrics()`** - System metrics
+7. **`updateFolder(id, folder)`** - Update folder only
 
 #### New MCP (Model Context Protocol) Client
 
-Added dedicated `MCPClient` class for direct access to MCP tools endpoints. Provides low-level MCP protocol access for advanced use cases.
+Added dedicated `MCPClient` class with 7 MCP tools:
+- `memoryStore()`, `memorySearch()`, `memoryGetContext()`
+- `memoryUpdate()`, `memoryPrune()`, `memoryExport()`, `memoryStats()`
 
-**Installation:**
-```typescript
-import { MCPClient, createMCPClient } from '@sekha/sdk';
-
-// Create MCP client
-const mcp = new MCPClient({
-  baseURL: 'http://localhost:8080',
-  mcpApiKey: 'mcp-key-...',
-  timeout: 30000,
-  maxRetries: 3,
-});
-
-// Or create from existing MemoryConfig
-const memory = new MemoryController({ apiKey: '...', baseURL: '...' });
-const mcp = createMCPClient(memory.config);
-```
-
-**MCP Tools:**
-
-1. **`memoryStore()`** - Store conversation via MCP
-   ```typescript
-   const response = await mcp.memoryStore({
-     label: 'Meeting Notes',
-     folder: '/work/meetings',
-     messages: [{ role: 'user', content: 'Discussed Q1 planning' }],
-     importance_score: 8
-   });
-   console.log(response.data.conversation_id);
-   ```
-
-2. **`memorySearch()`** - Semantic search via MCP
-   ```typescript
-   const response = await mcp.memorySearch({
-     query: 'kubernetes configuration',
-     limit: 10,
-     filters: { label: 'Engineering' }
-   });
-   response.data.results.forEach(r => {
-     console.log(`${r.label}: ${r.score}`);
-   });
-   ```
-
-3. **`memoryGetContext()`** - Get conversation context
-   ```typescript
-   const response = await mcp.memoryGetContext(conversationId);
-   console.log(response.data.label);
-   console.log(response.data.importance_score);
-   ```
-
-4. **`memoryUpdate()`** - Update conversation fields
-   ```typescript
-   const response = await mcp.memoryUpdate({
-     conversation_id: '123',
-     label: 'Updated Label',
-     folder: '/new/folder',
-     importance_score: 9
-   });
-   console.log(response.data.updated_fields);
-   ```
-
-5. **`memoryPrune()`** - Get pruning suggestions
-   ```typescript
-   const response = await mcp.memoryPrune({
-     threshold_days: 60,
-     importance_threshold: 5.0
-   });
-   console.log(`Found ${response.data.total_suggestions} candidates`);
-   console.log(`Savings: ${response.data.estimated_token_savings} tokens`);
-   ```
-
-6. **`memoryExport()`** - Export conversation
-   ```typescript
-   const response = await mcp.memoryExport({
-     conversation_id: '123',
-     format: 'json',
-     include_metadata: true
-   });
-   console.log(response.data.conversation);
-   console.log(response.data.messages);
-   ```
-
-7. **`memoryStats()`** - Get memory statistics
-   ```typescript
-   // Global stats
-   const global = await mcp.memoryStats({});
-   console.log(`Total: ${global.data.total_conversations}`);
-   console.log(`Folders: ${global.data.folders.join(', ')}`);
-   
-   // Folder-specific
-   const folderStats = await mcp.memoryStats({ folder: '/work' });
-   console.log(`Work conversations: ${folderStats.data.total_conversations}`);
-   
-   // Label-specific
-   const labelStats = await mcp.memoryStats({ label: 'Engineering' });
-   ```
-
-**MCP Features:**
-- Standard `McpToolResponse<T>` wrapper for all responses
-- Separate MCP authentication (optional `mcpApiKey`)
-- Full type safety for all MCP tool arguments and responses
-- Automatic retry with exponential backoff
-- Proper error handling for MCP-specific errors
-- Comprehensive test coverage (100%)
+See full docs in sections below.
 
 #### New Types
 
+**Bridge Types:**
+- `ChatMessage`, `CompletionRequest`, `CompletionResponse`
+- `CompletionChunk`, `StreamChoice` - Streaming
+- `EmbedRequest`, `EmbedResponse`
+- `SummarizeRequest`, `SummarizeResponse`
+- `ExtractRequest`, `ExtractResponse`, `ExtractedEntity`
+- `ScoreRequest`, `ScoreResponse`
+- `BridgeHealthStatus`, `BridgeConfig`
+
+**Unified Types:**
+- `SekhaConfig` - Unified configuration
+
 **REST API Types:**
-- `QueryResponse` - Paginated response with results
-- `FtsSearchRequest`, `FtsSearchResponse` - Full-text search
-- `SummaryResponse` - Summary generation
-- `PruneResponse` - Pruning suggestions
-- `CountResponse` - Conversation count
-- `Metrics` - System metrics
-- `ExecutePruneRequest` - Prune execution request
+- `QueryResponse`, `FtsSearchRequest`, `FtsSearchResponse`
+- `SummaryResponse`, `PruneResponse`, `CountResponse`, `Metrics`
 
 **MCP Types:**
-- `McpToolResponse<T>` - Standard MCP response wrapper
-- `MemoryStoreArgs` - memory_store arguments
-- `MemorySearchArgs` - memory_search arguments
-- `MemorySearchResult` - MCP search result
-- `MemoryUpdateArgs` - memory_update arguments
-- `MemoryPruneArgs` - memory_prune arguments
-- `MemoryExportArgs` - memory_export arguments
-- `MemoryStatsArgs` - memory_stats arguments
-- `MemoryStatsResponse` - memory_stats response
-- `MCPConfig` - MCP client configuration
+- `McpToolResponse<T>`, `MemoryStoreArgs`, `MemorySearchArgs`
+- `MemoryUpdateArgs`, `MemoryPruneArgs`, `MemoryExportArgs`
+- `MemoryStatsArgs`, `MemoryStatsResponse`, `MCPConfig`
 
 ### 🔧 Changed
 
@@ -263,11 +189,10 @@ const mcp = createMCPClient(memory.config);
 ### 📝 Documentation
 
 - Added comprehensive JSDoc comments for all methods
-- Added usage examples for all new endpoints
-- Added complete MCP client documentation
+- Added usage examples for all new endpoints and clients
+- Added complete MCP, Bridge, and Unified client documentation
 - Updated README with complete API reference
 - Added migration guide for breaking changes
-- Documented all MCP tools with examples
 
 ### 🧪 Tests
 
@@ -275,9 +200,9 @@ const mcp = createMCPClient(memory.config);
 - Added `tests/mcp.test.ts` with 100% coverage of MCPClient
 - Updated `tests/client.test.ts` to match new API
 - All tests passing with new implementation
-- Added integration test for complete pruning workflow
-- Added comprehensive error handling tests for MCP
-- Added retry logic tests for MCP client
+- Added integration tests for complete workflows
+- Added comprehensive error handling tests
+- Added retry logic tests
 
 ---
 
@@ -301,38 +226,43 @@ const mcp = createMCPClient(memory.config);
 
 ## Migration Guide: 0.1.0 → Unreleased
 
-### Step 1: Update Response Handling
+### Step 1: Choose Your Interface
+
+**Option A: Unified Interface (Recommended for new projects)**
+```typescript
+import { SekhaClient } from '@sekha/sdk';
+
+const sekha = new SekhaClient({
+  controllerURL: 'http://localhost:8080',
+  bridgeURL: 'http://localhost:5001',
+  apiKey: 'your-key'
+});
+
+// Access all features
+await sekha.controller.list();
+await sekha.bridge.complete({ messages });
+await sekha.completeWithContext('prompt', 'context');
+```
+
+**Option B: Individual Clients (More granular control)**
+```typescript
+import { MemoryController, MCPClient, BridgeClient } from '@sekha/sdk';
+
+const controller = new MemoryController({ ... });
+const mcp = new MCPClient({ ... });
+const bridge = new BridgeClient({ ... });
+```
+
+### Step 2: Update Response Handling
 
 ```typescript
 // BEFORE
 const conversations = await memory.list();
-conversations.forEach(conv => console.log(conv.label));
-
-const results = await memory.query('test');
-results.forEach(result => console.log(result.score));
 
 // AFTER
-const listResponse = await memory.list();
-listResponse.results.forEach(conv => console.log(conv.label));
-console.log(`Total: ${listResponse.total}`);
-
-const queryResponse = await memory.query('test');
-queryResponse.results.forEach(result => console.log(result.score));
-console.log(`Found ${queryResponse.total} results`);
-```
-
-### Step 2: Update updateLabel() Calls
-
-```typescript
-// BEFORE
-await memory.updateLabel(id, 'New Label');
-
-// AFTER - Get current conversation first to preserve folder
-const conv = await memory.get(id);
-await memory.updateLabel(id, 'New Label', conv.folder);
-
-// OR - Update folder separately if needed
-await memory.updateFolder(id, '/new/folder');
+const response = await memory.list();
+const conversations = response.results;
+console.log(`Total: ${response.total}`);
 ```
 
 ### Step 3: Update Type Definitions
@@ -340,94 +270,41 @@ await memory.updateFolder(id, '/new/folder');
 ```typescript
 // BEFORE
 interface Conversation {
-  id: string;
-  label: string;
   folder?: string;  // Optional
   messageCount?: number;  // camelCase
-  createdAt: string;  // camelCase
 }
 
 // AFTER
 interface Conversation {
-  id: string;
-  label: string;
   folder: string;  // Required!
   message_count: number;  // snake_case
-  created_at: string;  // snake_case
 }
 ```
 
-### Step 4: Update Context Assembly
+### Step 4: Leverage New Features
 
 ```typescript
-// BEFORE
-const context = await memory.assembleContext({
-  query: 'test',
-  tokenBudget: 8000,
-  labels: ['Engineering']
-});
-console.log(context.formattedContext);  // String
-
-// AFTER
-const context = await memory.assembleContext({
-  query: 'test',
-  context_budget: 8000,
-  preferred_labels: ['Engineering']
-});
-context.messages.forEach(msg => console.log(msg.content));  // Message[]
-```
-
-### Step 5: Leverage New Features
-
-```typescript
-// Count conversations
-const { count } = await memory.count({ label: 'Engineering' });
-
-// Full-text search
-const ftsResults = await memory.searchFTS('kubernetes');
-
-// Generate summaries
-const summary = await memory.summarize(id, 'weekly');
-
-// Complete pruning workflow
-const suggestions = await memory.getPruningSuggestions(60, 5.0);
-const toArchive = suggestions.suggestions
-  .filter(s => s.recommendation === 'archive')
-  .map(s => s.conversation_id);
-await memory.pruneExecute(toArchive);
-```
-
-### Step 6: Use MCP Client (Optional)
-
-For advanced use cases requiring direct MCP protocol access:
-
-```typescript
-import { MCPClient } from '@sekha/sdk';
-
-const mcp = new MCPClient({
-  baseURL: 'http://localhost:8080',
-  mcpApiKey: 'mcp-key-...',
+// Use Bridge for LLM operations
+const completion = await bridge.complete({
+  messages: [{ role: 'user', content: 'Hello' }]
 });
 
-// Store via MCP
-const storeResponse = await mcp.memoryStore({
-  label: 'MCP Test',
-  folder: '/test',
-  messages: [{ role: 'user', content: 'Hello' }],
-});
+// Use SekhaClient for workflows
+const response = await sekha.completeWithMemory(
+  'Explain our TypeScript architecture',
+  'TypeScript'
+);
 
-// Get stats
+// Use MCP for advanced operations
 const stats = await mcp.memoryStats({ folder: '/work' });
-console.log(`Conversations: ${stats.data.total_conversations}`);
 ```
 
 ### Breaking Change Checklist
 
-- [ ] Update `list()` calls to handle `QueryResponse`
-- [ ] Update `query()` calls to handle `QueryResponse`
+- [ ] Update `list()` and `query()` calls to handle `QueryResponse`
 - [ ] Add `folder` parameter to all `updateLabel()` calls
 - [ ] Update type definitions for `Conversation` (snake_case fields)
 - [ ] Update `assembleContext()` parameter names
-- [ ] Handle `ContextAssembly.messages` instead of `formattedContext`
-- [ ] Test with actual controller to verify all endpoints
-- [ ] (Optional) Consider MCPClient for advanced scenarios
+- [ ] (Optional) Migrate to `SekhaClient` for simplified workflows
+- [ ] (Optional) Add `BridgeClient` for LLM operations
+- [ ] Test with actual controller and bridge to verify all endpoints
