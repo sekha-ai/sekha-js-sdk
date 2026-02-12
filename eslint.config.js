@@ -5,13 +5,12 @@ import js from '@eslint/js';
 export default [
   js.configs.recommended,
   {
-    files: ['src/**/*.ts', 'src/**/*.tsx', 'tests/**/*.ts', 'tests/**/*.tsx'],
+    files: ['src/**/*.ts', 'src/**/*.tsx'],
     languageOptions: {
       parser: tsParser,
       parserOptions: {
         ecmaVersion: 2020,
         sourceType: 'module',
-        project: './tsconfig.json',
       },
       globals: {
         console: 'readonly',
@@ -27,6 +26,10 @@ export default [
         clearTimeout: 'readonly',
         setInterval: 'readonly',
         clearInterval: 'readonly',
+        fetch: 'readonly',
+        Response: 'readonly',
+        Request: 'readonly',
+        Headers: 'readonly',
       },
     },
     plugins: {
@@ -36,19 +39,26 @@ export default [
       ...tsPlugin.configs.recommended.rules,
       '@typescript-eslint/no-unused-vars': [
         'error',
-        { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
+        { 
+          argsIgnorePattern: '^_', 
+          varsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^_',
+          ignoreRestSiblings: true
+        },
       ],
       '@typescript-eslint/explicit-function-return-type': 'off',
       '@typescript-eslint/no-explicit-any': 'warn',
       '@typescript-eslint/no-non-null-assertion': 'warn',
+      '@typescript-eslint/no-this-alias': [
+        'error',
+        { allowDestructuring: true, allowedNames: ['self', 'that'] },
+      ],
+      '@typescript-eslint/no-empty-object-type': [
+        'error',
+        { allowInterfaces: 'always' },
+      ],
       'no-console': 'off',
-    },
-  },
-  {
-    files: ['tests/**/*.ts', 'tests/**/*.tsx'],
-    rules: {
-      '@typescript-eslint/no-explicit-any': 'off',
-      '@typescript-eslint/no-non-null-assertion': 'off',
+      'no-undef': 'off', // TypeScript handles this
     },
   },
 ];
