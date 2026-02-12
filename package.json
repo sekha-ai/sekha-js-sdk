@@ -1,7 +1,6 @@
 {
   "name": "@sekha/sdk",
   "version": "0.1.0",
-  "type": "module",
   "description": "JavaScript/TypeScript SDK for Sekha AI Memory Controller",
   "main": "dist/cjs/index.js",
   "module": "dist/esm/index.js",
@@ -20,14 +19,8 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:ui": "vitest --ui",
-    "test:integration": "vitest run tests/integration",
-    "lint": "eslint 'src/**/*.{ts,tsx}' --max-warnings 50",
-    "lint:fix": "eslint 'src/**/*.{ts,tsx}' 'tests/**/*.{ts,tsx}' --fix",
-    "typecheck": "tsc --noEmit",
-    "format": "prettier --write 'src/**/*.{ts,tsx,json}' 'tests/**/*.{ts,tsx}'",
-    "format:check": "prettier --check 'src/**/*.{ts,tsx,json}' 'tests/**/*.{ts,tsx}'",
-    "docs": "typedoc --entryPoints src/index.ts --out docs",
-    "prepublishOnly": "npm run build && npm test"
+    "lint": "eslint src --ext .ts,.tsx --max-warnings 0",
+    "lint:fix": "eslint src --ext .ts,.tsx --fix"
   },
   "keywords": [
     "ai",
@@ -50,11 +43,9 @@
     "@typescript-eslint/parser": "^8.20.0",
     "@vitest/coverage-v8": "^4.0.18",
     "@vitest/ui": "^4.0.16",
-    "eslint": "^9.18.0",
+    "eslint": "^9.39.2",
     "happy-dom": "^20.3.9",
-    "prettier": "^3.4.2",
-    "typedoc": "^0.27.9",
-    "typescript": "~5.8.0",
+    "typescript": "^5.9.0",
     "vitest": "^4.0.18"
   }
 }
