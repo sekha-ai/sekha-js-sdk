@@ -4,7 +4,7 @@ import { SekhaValidationError, SekhaAuthError, SekhaNotFoundError, SekhaAPIError
 
 const mockMCPConfig = {
   baseURL: 'http://localhost:8080',
-  mcpApiKey: 'mcp-test-key-1234567890',
+  mcpApiKey: 'sk-test-mcp-key-1234567890123456789012', // 42 chars
   timeout: 30000,
   maxRetries: 3,
 };
@@ -53,7 +53,7 @@ describe('MCPClient', () => {
     it('should throw on invalid URL', () => {
       expect(() => new MCPClient({
         baseURL: 'not-a-url',
-        mcpApiKey: 'test-key-123456',
+        mcpApiKey: 'sk-test-key-123456789012345678901234', // 40 chars
       })).toThrow(SekhaValidationError);
     });
 
@@ -74,16 +74,16 @@ describe('MCPClient', () => {
     it('should fallback to apiKey if mcpApiKey not provided', () => {
       const client2 = new MCPClient({
         baseURL: 'http://localhost:8080',
-        apiKey: 'fallback-key-123456',
+        apiKey: 'sk-fallback-key-123456789012345678', // 38 chars
       });
 
-      expect((client2 as any).config.mcpApiKey).toBe('fallback-key-123456');
+      expect((client2 as any).config.mcpApiKey).toBe('sk-fallback-key-123456789012345678');
     });
 
     it('should use default timeout and maxRetries', () => {
       const client2 = new MCPClient({
         baseURL: 'http://localhost:8080',
-        mcpApiKey: 'test-key-123456',
+        mcpApiKey: 'sk-test-key-123456789012345678901234', // 40 chars
       });
 
       expect((client2 as any).config.timeout).toBe(30000);
@@ -555,7 +555,7 @@ describe('MCPClient', () => {
     it('should create MCP client from MemoryConfig', () => {
       const memoryConfig = {
         baseURL: 'http://localhost:8080',
-        apiKey: 'test-key-123456',
+        apiKey: 'sk-test-key-12345678901234567890123456789012', // 48 chars
         timeout: 5000,
         maxRetries: 2,
       };
