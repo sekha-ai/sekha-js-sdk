@@ -18,7 +18,14 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "test:ui": "vitest --ui"
+    "test:ui": "vitest --ui",
+    "test:integration": "vitest run tests/integration",
+    "lint": "echo 'Linting skipped - add ESLint config if needed' && exit 0",
+    "typecheck": "tsc --noEmit",
+    "format": "echo 'Formatting skipped - add Prettier if needed' && exit 0",
+    "format:check": "echo 'Format check skipped - add Prettier if needed' && exit 0",
+    "docs": "echo 'Docs generation skipped - add TypeDoc if needed' && exit 0",
+    "prepublishOnly": "npm run build && npm test"
   },
   "keywords": [
     "ai",
