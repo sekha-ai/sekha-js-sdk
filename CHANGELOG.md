@@ -105,8 +105,117 @@ Multiple methods were using incorrect API paths that didn't match the controller
    await memory.updateFolder(id, '/new/folder/path');
    ```
 
+#### New MCP (Model Context Protocol) Client
+
+Added dedicated `MCPClient` class for direct access to MCP tools endpoints. Provides low-level MCP protocol access for advanced use cases.
+
+**Installation:**
+```typescript
+import { MCPClient, createMCPClient } from '@sekha/sdk';
+
+// Create MCP client
+const mcp = new MCPClient({
+  baseURL: 'http://localhost:8080',
+  mcpApiKey: 'mcp-key-...',
+  timeout: 30000,
+  maxRetries: 3,
+});
+
+// Or create from existing MemoryConfig
+const memory = new MemoryController({ apiKey: '...', baseURL: '...' });
+const mcp = createMCPClient(memory.config);
+```
+
+**MCP Tools:**
+
+1. **`memoryStore()`** - Store conversation via MCP
+   ```typescript
+   const response = await mcp.memoryStore({
+     label: 'Meeting Notes',
+     folder: '/work/meetings',
+     messages: [{ role: 'user', content: 'Discussed Q1 planning' }],
+     importance_score: 8
+   });
+   console.log(response.data.conversation_id);
+   ```
+
+2. **`memorySearch()`** - Semantic search via MCP
+   ```typescript
+   const response = await mcp.memorySearch({
+     query: 'kubernetes configuration',
+     limit: 10,
+     filters: { label: 'Engineering' }
+   });
+   response.data.results.forEach(r => {
+     console.log(`${r.label}: ${r.score}`);
+   });
+   ```
+
+3. **`memoryGetContext()`** - Get conversation context
+   ```typescript
+   const response = await mcp.memoryGetContext(conversationId);
+   console.log(response.data.label);
+   console.log(response.data.importance_score);
+   ```
+
+4. **`memoryUpdate()`** - Update conversation fields
+   ```typescript
+   const response = await mcp.memoryUpdate({
+     conversation_id: '123',
+     label: 'Updated Label',
+     folder: '/new/folder',
+     importance_score: 9
+   });
+   console.log(response.data.updated_fields);
+   ```
+
+5. **`memoryPrune()`** - Get pruning suggestions
+   ```typescript
+   const response = await mcp.memoryPrune({
+     threshold_days: 60,
+     importance_threshold: 5.0
+   });
+   console.log(`Found ${response.data.total_suggestions} candidates`);
+   console.log(`Savings: ${response.data.estimated_token_savings} tokens`);
+   ```
+
+6. **`memoryExport()`** - Export conversation
+   ```typescript
+   const response = await mcp.memoryExport({
+     conversation_id: '123',
+     format: 'json',
+     include_metadata: true
+   });
+   console.log(response.data.conversation);
+   console.log(response.data.messages);
+   ```
+
+7. **`memoryStats()`** - Get memory statistics
+   ```typescript
+   // Global stats
+   const global = await mcp.memoryStats({});
+   console.log(`Total: ${global.data.total_conversations}`);
+   console.log(`Folders: ${global.data.folders.join(', ')}`);
+   
+   // Folder-specific
+   const folderStats = await mcp.memoryStats({ folder: '/work' });
+   console.log(`Work conversations: ${folderStats.data.total_conversations}`);
+   
+   // Label-specific
+   const labelStats = await mcp.memoryStats({ label: 'Engineering' });
+   ```
+
+**MCP Features:**
+- Standard `McpToolResponse<T>` wrapper for all responses
+- Separate MCP authentication (optional `mcpApiKey`)
+- Full type safety for all MCP tool arguments and responses
+- Automatic retry with exponential backoff
+- Proper error handling for MCP-specific errors
+- Comprehensive test coverage (100%)
+
 #### New Types
 
+**REST API Types:**
 - `QueryResponse` - Paginated response with results
 - `FtsSearchRequest`, `FtsSearchResponse` - Full-text search
 - `SummaryResponse` - Summary generation
@@ -114,6 +223,18 @@ Multiple methods were using incorrect API paths that didn't match the controller
 - `CountResponse` - Conversation count
 - `Metrics` - System metrics
 - `ExecutePruneRequest` - Prune execution request
+
+**MCP Types:**
+- `McpToolResponse<T>` - Standard MCP response wrapper
+- `MemoryStoreArgs` - memory_store arguments
+- `MemorySearchArgs` - memory_search arguments
+- `MemorySearchResult` - MCP search result
+- `MemoryUpdateArgs` - memory_update arguments
+- `MemoryPruneArgs` - memory_prune arguments
+- `MemoryExportArgs` - memory_export arguments
+- `MemoryStatsArgs` - memory_stats arguments
+- `MemoryStatsResponse` - memory_stats response
+- `MCPConfig` - MCP client configuration
 
 ### 🔧 Changed
 
@@ -143,15 +264,20 @@ Multiple methods were using incorrect API paths that didn't match the controller
 
 - Added comprehensive JSDoc comments for all methods
 - Added usage examples for all new endpoints
+- Added complete MCP client documentation
 - Updated README with complete API reference
 - Added migration guide for breaking changes
+- Documented all MCP tools with examples
 
 ### 🧪 Tests
 
 - Added `tests/endpoints.test.ts` with 100% coverage of new/fixed endpoints
+- Added `tests/mcp.test.ts` with 100% coverage of MCPClient
 - Updated `tests/client.test.ts` to match new API
 - All tests passing with new implementation
 - Added integration test for complete pruning workflow
+- Added comprehensive error handling tests for MCP
+- Added retry logic tests for MCP client
 
 ---
 
@@ -271,6 +397,30 @@ const toArchive = suggestions.suggestions
 await memory.pruneExecute(toArchive);
 ```
 
+### Step 6: Use MCP Client (Optional)
+
+For advanced use cases requiring direct MCP protocol access:
+
+```typescript
+import { MCPClient } from '@sekha/sdk';
+
+const mcp = new MCPClient({
+  baseURL: 'http://localhost:8080',
+  mcpApiKey: 'mcp-key-...',
+});
+
+// Store via MCP
+const storeResponse = await mcp.memoryStore({
+  label: 'MCP Test',
+  folder: '/test',
+  messages: [{ role: 'user', content: 'Hello' }],
+});
+
+// Get stats
+const stats = await mcp.memoryStats({ folder: '/work' });
+console.log(`Conversations: ${stats.data.total_conversations}`);
+```
+
 ### Breaking Change Checklist
 
 - [ ] Update `list()` calls to handle `QueryResponse`
@@ -280,3 +430,4 @@ await memory.pruneExecute(toArchive);
 - [ ] Update `assembleContext()` parameter names
 - [ ] Handle `ContextAssembly.messages` instead of `formattedContext`
 - [ ] Test with actual controller to verify all endpoints
+- [ ] (Optional) Consider MCPClient for advanced scenarios
