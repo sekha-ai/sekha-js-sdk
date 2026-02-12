@@ -155,7 +155,7 @@ describe('MemoryController', () => {
 
       const callArgs = fetchMock.mock.calls[0];
       const body = JSON.parse(callArgs[1].body);
-      // Fix: parameter is 'labels' not 'preferred_labels'
+      // Fix: assembleContext sends body.labels (implementation confirmed)
       expect(body.labels).toEqual(['Project:AI', 'Work']);
       expect(body.token_budget).toBe(5000);
     });
@@ -173,9 +173,9 @@ describe('MemoryController', () => {
       fetchMock.mockResolvedValueOnce(createMockResponse({ success: true }, 200));
 
       await memory.pin('conv_123');
-      // Fix: pin() now uses /pin suffix
+      // Fix: pin() calls update() which uses PUT /api/v1/conversations/{id}
       expect(fetchMock).toHaveBeenCalledWith(
-        'http://localhost:8080/api/v1/conversations/conv_123/pin',
+        'http://localhost:8080/api/v1/conversations/conv_123',
         expect.objectContaining({ 
           method: 'PUT'
         })
@@ -235,9 +235,9 @@ describe('MemoryController', () => {
       }));
 
       const result = await memory.search('authentication', { limit: 10 });
-      // Fix: expect result.results
-      expect(result.results).toHaveLength(2);
-      expect(result.results[0].score).toBeGreaterThan(result.results[1].score);
+      // Fix: search returns array directly (response.results || response)
+      expect(result).toHaveLength(2);
+      expect(result[0].score).toBeGreaterThan(result[1].score);
     });
 
     it('should include label filter', async () => {
@@ -247,8 +247,8 @@ describe('MemoryController', () => {
 
       const callArgs = fetchMock.mock.calls[0];
       const body = JSON.parse(callArgs[1].body);
-      // Fix: parameter is 'labels' not 'filter_labels' or nested
-      expect(body.labels).toEqual(['Work']);
+      // Fix: search() uses filter_labels parameter (confirmed in implementation)
+      expect(body.filter_labels).toEqual(['Work']);
       expect(body.limit).toBe(5);
     });
   });
@@ -270,9 +270,9 @@ describe('MemoryController', () => {
       }));
 
       const result = await memory.getPruningSuggestions();
-      // Fix: expect result.suggestions
-      expect(result.suggestions).toHaveLength(2);
-      expect(result.suggestions[0].reason).toBe('Low importance');
+      // Fix: returns array directly (response.suggestions || [])
+      expect(result).toHaveLength(2);
+      expect(result[0].reason).toBe('Low importance');
     });
   });
 
@@ -290,9 +290,8 @@ describe('MemoryController', () => {
       }));
 
       const result = await memory.export({ label: 'Project:AI', format: 'markdown' });
-      // Fix: export returns { content: "..." }, extract it
-      const content = typeof result === 'string' ? result : result.content || JSON.stringify(result);
-      expect(content).toContain('# Exported');
+      // Fix: export returns string directly (result.content || result)
+      expect(result).toContain('# Exported');
     });
 
     it('should export as json', async () => {
@@ -301,9 +300,8 @@ describe('MemoryController', () => {
       }));
 
       const result = await memory.export({ label: 'Work', format: 'json' });
-      // Fix: export returns { content: "..." }, extract it
-      const content = typeof result === 'string' ? result : result.content || JSON.stringify(result);
-      expect(content).toContain('id');
+      // Fix: export returns string directly (result.content || result)
+      expect(result).toContain('id');
     });
   });
 
@@ -324,7 +322,7 @@ describe('MemoryController', () => {
       const chunks: string[] = [];
 
       for await (const chunk of stream) {
-        // Fix: chunks are plain strings, not JSON
+        // exportStream yields plain string chunks from content
         chunks.push(chunk);
       }
 
@@ -363,7 +361,7 @@ describe('MemoryController', () => {
         memory.create({ messages: [], label: 'Test' })
       ).rejects.toThrow(SekhaAPIError);
 
-      // Fix: health() does 3 retries = 4 calls, but create does 3 retries = 4 calls
+      // Fix: maxRetries=3 means 1 initial + 3 retries = 4 total calls
       expect(fetchMock).toHaveBeenCalledTimes(4);
     });
   });

@@ -58,7 +58,7 @@ describe('MemoryController - Advanced Coverage', () => {
       expect(result.suggestions).toHaveLength(2);
       expect(result.suggestions[0].label).toBe('Engineering');
       expect(fetchMock).toHaveBeenCalledWith(
-        'http://localhost:8080/api/v1/labels/suggest',
+        'http://localhost:8080/api/v1/conversations/conv_123/suggest-labels',
         expect.objectContaining({ method: 'POST' })
       );
     });
@@ -74,8 +74,8 @@ describe('MemoryController - Advanced Coverage', () => {
         ]
       }));
 
-      // Mock updateLabel response - return 204 or valid response
-      fetchMock.mockResolvedValueOnce(createMockResponse({}, 204));
+      // Mock updateLabel response - updateLabel uses PUT to /conversations/{id}
+      fetchMock.mockResolvedValueOnce(createMockResponse(null, 204));
 
       const appliedLabel = await (memory as any).autoLabel('conv_123', 0.9);
 
@@ -100,16 +100,16 @@ describe('MemoryController - Advanced Coverage', () => {
 
   describe('exportStream edge cases', () => {
     it('should handle exportStream chunking correctly', async () => {
-      // Fix: Export returns { content: "..." } not raw string
+      // Export returns { content: "..." }
       fetchMock.mockResolvedValueOnce(createMockResponse({
-        content: 'A'.repeat(2500) // 2500 chars, should create 3 chunks (1024, 1024, 452)
+        content: 'A'.repeat(2500)
       }));
 
       const stream = memory.exportStream({ format: 'markdown' });
       const chunks: string[] = [];
 
       for await (const chunk of stream) {
-        // Chunks are plain strings, not JSON
+        // exportStream yields plain string chunks (from content field)
         chunks.push(chunk);
       }
 
@@ -223,9 +223,9 @@ describe('MemoryController - Advanced Coverage', () => {
       fetchMock.mockResolvedValue(await createMockResponse(mockSuggestions));
       const result = await (memory as any).getPruningSuggestions(60, 5.0);
 
-      // Fix: expect result.suggestions
-      expect(result.suggestions).toHaveLength(1);
-      expect(result.suggestions[0].ageDays).toBe(90);
+      // Fix: getPruningSuggestions returns array directly (response.suggestions || [])
+      expect(result).toHaveLength(1);
+      expect(result[0].ageDays).toBe(90);
     });
   });
 
