@@ -54,10 +54,11 @@ describe('MemoryController - Advanced Coverage', () => {
 
       const result = await (memory as any).suggestLabels('conv_123');
       
+      // Fix: expect result.suggestions (response structure)
       expect(result.suggestions).toHaveLength(2);
       expect(result.suggestions[0].label).toBe('Engineering');
       expect(fetchMock).toHaveBeenCalledWith(
-        'http://localhost:8080/api/v1/conversations/conv_123/suggest-labels',
+        'http://localhost:8080/api/v1/labels/suggest',
         expect.objectContaining({ method: 'POST' })
       );
     });
@@ -73,8 +74,8 @@ describe('MemoryController - Advanced Coverage', () => {
         ]
       }));
 
-      // Mock updateLabel response
-      fetchMock.mockResolvedValueOnce(createMockResponse({ success: true }));
+      // Mock updateLabel response - return 204 or valid response
+      fetchMock.mockResolvedValueOnce(createMockResponse({}, 204));
 
       const appliedLabel = await (memory as any).autoLabel('conv_123', 0.9);
 
@@ -99,20 +100,20 @@ describe('MemoryController - Advanced Coverage', () => {
 
   describe('exportStream edge cases', () => {
     it('should handle exportStream chunking correctly', async () => {
+      // Fix: Export returns { content: "..." } not raw string
       fetchMock.mockResolvedValueOnce(createMockResponse({
-        content: 'A'.repeat(2500) // 2500 chars
+        content: 'A'.repeat(2500) // 2500 chars, should create 3 chunks (1024, 1024, 452)
       }));
 
       const stream = memory.exportStream({ format: 'markdown' });
       const chunks: string[] = [];
 
       for await (const chunk of stream) {
-        // Parse JSON chunks and extract content
-        const parsed = JSON.parse(chunk);
-        chunks.push(parsed.content || chunk);
+        // Chunks are plain strings, not JSON
+        chunks.push(chunk);
       }
 
-      expect(chunks.length).toBeGreaterThan(0);
+      expect(chunks.length).toBe(3);
       expect(chunks.join('')).toBe('A'.repeat(2500));
     });
   });
@@ -202,8 +203,9 @@ describe('MemoryController - Advanced Coverage', () => {
 
       expect(fetchMock).toHaveBeenCalledTimes(1);
     });
-  });
+  }); // Close Error handling edge cases
 
+  // These were nested inside Error handling - moved to top level
   describe('getPruningSuggestions', () => {
     it('should fetch pruning suggestions', async () => {
       const mockSuggestions = {
@@ -221,6 +223,7 @@ describe('MemoryController - Advanced Coverage', () => {
       fetchMock.mockResolvedValue(await createMockResponse(mockSuggestions));
       const result = await (memory as any).getPruningSuggestions(60, 5.0);
 
+      // Fix: expect result.suggestions
       expect(result.suggestions).toHaveLength(1);
       expect(result.suggestions[0].ageDays).toBe(90);
     });
