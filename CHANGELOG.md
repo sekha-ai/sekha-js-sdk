@@ -27,6 +27,84 @@ Multiple methods were using incorrect API paths that didn't match the controller
 
 ### ✨ Added
 
+#### 🌟 NEW: Complete Type Safety (Phase 5)
+
+Comprehensive TypeScript type system matching all controller and bridge types:
+
+**50+ Type Definitions:**
+- All controller DTOs from `src/api/dto.rs`
+- Multi-modal message support (text + images)
+- Pagination, filtering, search types
+- Context assembly, pruning, summarization
+- Label suggestions with AI confidence
+- MCP tool request/response types
+- Bridge LLM operation types
+
+**Type Guards & Utilities:**
+```typescript
+import {
+  isMultiModalContent,
+  extractText,
+  extractImageUrls,
+  hasImages,
+  isValidStatus
+} from '@sekha/sdk';
+
+// Multi-modal content handling
+const message: Message = {
+  role: 'user',
+  content: [
+    { type: 'text', text: 'What is in this image?' },
+    { type: 'image_url', image_url: { url: 'https://...' } }
+  ]
+};
+
+if (isMultiModalContent(message.content)) {
+  const text = extractText(message.content);
+  const images = extractImageUrls(message.content);
+  console.log(`Text: ${text}, Images: ${images.length}`);
+}
+
+// Status validation
+if (isValidStatus(conversation.status)) {
+  // TypeScript knows status is 'active' | 'archived' | 'pinned'
+}
+```
+
+**Multi-Modal Message Support:**
+```typescript
+// Text-only message (backward compatible)
+const textMessage: Message = {
+  role: 'user',
+  content: 'Hello world'
+};
+
+// Vision message with image
+const visionMessage: Message = {
+  role: 'user',
+  content: [
+    { type: 'text', text: 'Analyze this chart' },
+    { 
+      type: 'image_url',
+      image_url: {
+        url: 'https://example.com/chart.png',
+        detail: 'high'
+      }
+    }
+  ]
+};
+```
+
+**Union Types:**
+- `ConversationStatus = 'active' | 'archived' | 'pinned'`
+- `PruneRecommendation = 'archive' | 'keep' | 'review'`
+- `MessageContent = string | ContentPart[]`
+
+**Deprecated Aliases (backward compatibility):**
+- `ConversationDto` → Use `Conversation`
+- `SearchResultDto` → Use `SearchResult`
+- `PruningSuggestionDto` → Use `PruningSuggestion`
+
 #### 🌟 NEW: BridgeClient (LLM Operations)
 
 Direct access to Sekha LLM Bridge for completions, embeddings, and LLM operations.
@@ -91,32 +169,8 @@ await sekha.bridge.complete({ messages });
 **High-Level Convenience Methods:**
 
 1. **`storeAndQuery(messages, query, options)`** - Store then search
-   ```typescript
-   const { conversation, results } = await sekha.storeAndQuery(
-     messages,
-     'TypeScript',
-     { label: 'Engineering' }
-   );
-   ```
-
 2. **`completeWithContext(prompt, contextQuery, options)`** - LLM + Memory context
-   ```typescript
-   const response = await sekha.completeWithContext(
-     'What were the main takeaways?',
-     'meeting notes'
-   );
-   console.log(response.choices[0].message.content);
-   ```
-
 3. **`completeWithMemory(prompt, searchQuery, options)`** - LLM + Search results
-   ```typescript
-   const response = await sekha.completeWithMemory(
-     'Summarize TypeScript discussion',
-     'TypeScript',
-     { limit: 5 }
-   );
-   ```
-
 4. **`embedAndStore(messages, options)`** - Custom embedding + storage
 5. **`streamWithContext(prompt, contextQuery, options)`** - Streaming with context
 6. **`healthCheck()`** - Check all services
@@ -137,13 +191,40 @@ Added dedicated `MCPClient` class with 7 MCP tools:
 - `memoryStore()`, `memorySearch()`, `memoryGetContext()`
 - `memoryUpdate()`, `memoryPrune()`, `memoryExport()`, `memoryStats()`
 
-See full docs in sections below.
+#### New Types (50+ interfaces)
 
-#### New Types
+**Core Types:**
+- `Message`, `MessageContent`, `ContentPart`, `ImageUrl`
+- `Conversation`, `ConversationStatus`
+- `MemoryConfig`
+
+**Request Types:**
+- `CreateOptions`, `ListFilter`, `SearchOptions`
+- `ContextOptions`, `ExportOptions`
+- `UpdateLabelRequest`, `UpdateFolderRequest`
+- `QueryRequest`, `FtsSearchRequest`
+- `ContextAssembleRequest`, `SummarizeRequest`
+- `PruneRequest`, `ExecutePruneRequest`
+- `LabelSuggestRequest`, `RebuildEmbeddingsRequest`
+
+**Response Types:**
+- `SearchResult`, `QueryResponse`
+- `FtsMessage`, `FtsSearchResponse`
+- `ContextAssembly`
+- `PruningSuggestion`, `PruneResponse`, `PruneRecommendation`
+- `LabelSuggestion`, `LabelSuggestResponse`
+- `SummaryResponse`
+- `HealthStatus`, `ErrorResponse`
+- `RebuildEmbeddingsResponse`
+- `Metrics`, `CountResponse`
+
+**MCP Types:**
+- `McpToolResponse<T>`
+- `MemoryStoreRequest`, `MemoryQueryRequest`, `MemoryQueryResponse`
 
 **Bridge Types:**
 - `ChatMessage`, `CompletionRequest`, `CompletionResponse`
-- `CompletionChunk`, `StreamChoice` - Streaming
+- `CompletionChunk`, `StreamChoice`
 - `EmbedRequest`, `EmbedResponse`
 - `SummarizeRequest`, `SummarizeResponse`
 - `ExtractRequest`, `ExtractResponse`, `ExtractedEntity`
@@ -151,16 +232,14 @@ See full docs in sections below.
 - `BridgeHealthStatus`, `BridgeConfig`
 
 **Unified Types:**
-- `SekhaConfig` - Unified configuration
+- `SekhaConfig`
 
-**REST API Types:**
-- `QueryResponse`, `FtsSearchRequest`, `FtsSearchResponse`
-- `SummaryResponse`, `PruneResponse`, `CountResponse`, `Metrics`
-
-**MCP Types:**
-- `McpToolResponse<T>`, `MemoryStoreArgs`, `MemorySearchArgs`
-- `MemoryUpdateArgs`, `MemoryPruneArgs`, `MemoryExportArgs`
-- `MemoryStatsArgs`, `MemoryStatsResponse`, `MCPConfig`
+**Utility Types:**
+- `PaginationParams`, `FilterParams`, `SortParams`
+- `BulkOperationResult`
+- Type guards: `isMultiModalContent`, `isTextPart`, `isImagePart`
+- Helpers: `extractText`, `extractImageUrls`, `hasImages`
+- Validators: `isValidStatus`, `isValidRecommendation`
 
 ### 🔧 Changed
 
@@ -191,6 +270,8 @@ See full docs in sections below.
 - Added comprehensive JSDoc comments for all methods
 - Added usage examples for all new endpoints and clients
 - Added complete MCP, Bridge, and Unified client documentation
+- Documented all 50+ type definitions
+- Added type guard and utility function examples
 - Updated README with complete API reference
 - Added migration guide for breaking changes
 
@@ -284,6 +365,13 @@ interface Conversation {
 ### Step 4: Leverage New Features
 
 ```typescript
+// Use type guards
+import { isMultiModalContent, extractText } from '@sekha/sdk';
+
+if (isMultiModalContent(message.content)) {
+  const text = extractText(message.content);
+}
+
 // Use Bridge for LLM operations
 const completion = await bridge.complete({
   messages: [{ role: 'user', content: 'Hello' }]
@@ -294,9 +382,6 @@ const response = await sekha.completeWithMemory(
   'Explain our TypeScript architecture',
   'TypeScript'
 );
-
-// Use MCP for advanced operations
-const stats = await mcp.memoryStats({ folder: '/work' });
 ```
 
 ### Breaking Change Checklist
@@ -305,6 +390,7 @@ const stats = await mcp.memoryStats({ folder: '/work' });
 - [ ] Add `folder` parameter to all `updateLabel()` calls
 - [ ] Update type definitions for `Conversation` (snake_case fields)
 - [ ] Update `assembleContext()` parameter names
+- [ ] Use new type guards for multi-modal content
 - [ ] (Optional) Migrate to `SekhaClient` for simplified workflows
 - [ ] (Optional) Add `BridgeClient` for LLM operations
 - [ ] Test with actual controller and bridge to verify all endpoints
