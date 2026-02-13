@@ -3,8 +3,9 @@
 > **Official JavaScript & TypeScript Client for Sekha Memory System**
 
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.0%2B-blue.svg)](https://www.typescriptlang.org)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.9%2B-blue.svg)](https://www.typescriptlang.org)
 [![npm](https://img.shields.io/badge/npm-coming--soon-orange.svg)](https://www.npmjs.com)
+[![CI](https://github.com/sekha-ai/sekha-js-sdk/actions/workflows/ci.yml/badge.svg)](https://github.com/sekha-ai/sekha-js-sdk/actions/workflows/ci.yml)
 
 ---
 
@@ -15,14 +16,15 @@ Official JavaScript/TypeScript client for the Sekha Memory System - providing pe
 **Features:**
 
 - ✅ **4 Client Interfaces** - Controller, MCP, Bridge, Unified
-- ✅ **Full REST API** - 19+ endpoints with complete coverage
+- ✅ **Full REST API** - 19 endpoints with complete coverage
 - ✅ **MCP Protocol** - 7 Model Context Protocol tools
 - ✅ **LLM Bridge** - Direct completions, embeddings, streaming
 - ✅ **TypeScript** - 50+ interfaces with complete type safety
 - ✅ **Multi-Modal** - Text + image message support
-- ✅ **Streaming** - SSE support for LLM completions
+- ✅ **Streaming** - Server-Sent Events for LLM completions
 - ✅ **Tree-shakeable** - ESM with selective imports
 - ✅ **Universal** - Works in Node.js & browser
+- ✅ **Zero Dependencies** - Lightweight with no external deps
 
 ---
 
@@ -41,7 +43,7 @@ Official JavaScript/TypeScript client for the Sekha Memory System - providing pe
 
 ```bash
 # From npm (coming soon)
-npm install @sekha-ai/sdk
+npm install @sekha/sdk
 
 # From source (current)
 git clone https://github.com/sekha-ai/sekha-js-sdk.git
@@ -53,13 +55,13 @@ npm run build
 ### Simple Usage - Unified Client (Recommended)
 
 ```typescript
-import { SekhaClient } from '@sekha-ai/sdk';
+import { SekhaClient } from '@sekha/sdk';
 
 // Initialize with all services
 const sekha = new SekhaClient({
   controllerURL: 'http://localhost:8080',
   bridgeURL: 'http://localhost:5001',
-  apiKey: 'your-api-key'
+  apiKey: 'sk-your-api-key'
 });
 
 // One-line workflows
@@ -74,18 +76,18 @@ console.log(response.choices[0].message.content);
 ### Advanced Usage - Individual Clients
 
 ```typescript
-import { MemoryController, MCPClient, BridgeClient } from '@sekha-ai/sdk';
+import { MemoryController, MCPClient, BridgeClient } from '@sekha/sdk';
 
 // REST API client
 const controller = new MemoryController({
   baseURL: 'http://localhost:8080',
-  apiKey: 'your-api-key'
+  apiKey: 'sk-your-api-key'
 });
 
 // MCP protocol client
 const mcp = new MCPClient({
   baseURL: 'http://localhost:8080',
-  mcpApiKey: 'your-mcp-key'
+  mcpApiKey: 'sk-your-mcp-key'
 });
 
 // LLM Bridge client
@@ -103,18 +105,18 @@ const completion = await bridge.complete({
 
 ---
 
-## 📖 Core Concepts
+## 📝 Core Concepts
 
 ### 1. MemoryController - REST API (19 endpoints)
 
 Direct HTTP access to Sekha Controller for conversation management.
 
 ```typescript
-import { MemoryController } from '@sekha-ai/sdk';
+import { MemoryController } from '@sekha/sdk';
 
 const controller = new MemoryController({
   baseURL: 'http://localhost:8080',
-  apiKey: 'your-api-key'
+  apiKey: 'sk-your-api-key'
 });
 
 // Store conversation
@@ -170,11 +172,11 @@ await controller.pruneExecute({
 MCP protocol for standardized AI memory operations.
 
 ```typescript
-import { MCPClient } from '@sekha-ai/sdk';
+import { MCPClient } from '@sekha/sdk';
 
 const mcp = new MCPClient({
   baseURL: 'http://localhost:8080',
-  mcpApiKey: 'your-mcp-key'
+  mcpApiKey: 'sk-your-mcp-key'
 });
 
 // Store via MCP
@@ -225,7 +227,7 @@ console.log(`Messages: ${stats.total_messages}`);
 Direct access to Sekha LLM Bridge for completions and embeddings.
 
 ```typescript
-import { BridgeClient } from '@sekha-ai/sdk';
+import { BridgeClient } from '@sekha/sdk';
 
 const bridge = new BridgeClient({
   baseURL: 'http://localhost:5001'
@@ -290,12 +292,12 @@ console.log(`Importance: ${score.score}/10`);
 Combines all three clients with high-level convenience methods.
 
 ```typescript
-import { SekhaClient } from '@sekha-ai/sdk';
+import { SekhaClient } from '@sekha/sdk';
 
 const sekha = new SekhaClient({
   controllerURL: 'http://localhost:8080',
   bridgeURL: 'http://localhost:5001',
-  apiKey: 'your-api-key'
+  apiKey: 'sk-your-api-key'
 });
 
 // Access any client directly
@@ -361,7 +363,7 @@ console.log(`Bridge: ${health.bridge.status}`);
 ### Multi-Modal Messages (Text + Images)
 
 ```typescript
-import { Message } from '@sekha-ai/sdk';
+import { Message } from '@sekha/sdk';
 
 // Vision message with image
 const visionMessage: Message = {
@@ -400,7 +402,7 @@ import {
   extractImageUrls,
   hasImages,
   isValidStatus
-} from '@sekha-ai/sdk';
+} from '@sekha/sdk';
 
 const message: Message = { /* ... */ };
 
@@ -449,7 +451,7 @@ console.log('\nComplete response:', fullResponse);
 ### Error Handling
 
 ```typescript
-import { SekhaError } from '@sekha-ai/sdk';
+import { SekhaError } from '@sekha/sdk';
 
 try {
   const results = await controller.query('search');
@@ -502,7 +504,7 @@ do {
 
 ## 📋 Complete API Reference
 
-### MemoryController (REST API)
+### MemoryController (REST API - 19 Endpoints)
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
@@ -519,7 +521,7 @@ do {
 | `archive()` | PUT `/api/v1/conversations/:id/archive` | Archive conversation |
 | `updateLabel()` | PUT `/api/v1/conversations/:id/label` | Update label |
 | `updateFolder()` | PUT `/api/v1/conversations/:id/folder` | Update folder |
-| `suggestLabel()` | POST `/api/v1/conversations/:id/suggest-label` | AI label suggestions |
+| `suggestLabel()` | POST `/api/v1/labels/suggest` | AI label suggestions |
 | `summarize()` | POST `/api/v1/summarize` | Generate summary |
 | `getPruningSuggestions()` | POST `/api/v1/prune/dry-run` | Get prune suggestions |
 | `pruneExecute()` | POST `/api/v1/prune/execute` | Execute pruning |
@@ -528,7 +530,7 @@ do {
 | `health()` | GET `/health` | Health check |
 | `getMetrics()` | GET `/metrics` | System metrics |
 
-### MCPClient (MCP Protocol)
+### MCPClient (MCP Protocol - 7 Tools)
 
 | Tool | Description |
 |------|-------------|
@@ -540,7 +542,7 @@ do {
 | `memoryExport()` | Export conversations |
 | `memoryStats()` | Get statistics by folder/label |
 
-### BridgeClient (LLM Bridge)
+### BridgeClient (LLM Bridge - 7 Methods)
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
@@ -552,7 +554,7 @@ do {
 | `score()` | POST `/api/v1/score` | Importance scoring |
 | `health()` | GET `/health` | Health check |
 
-### SekhaClient (Unified)
+### SekhaClient (Unified - 6 Workflows)
 
 | Method | Description |
 |--------|-------------|
@@ -575,11 +577,12 @@ do {
 </head>
 <body>
   <script type="module">
-    import { SekhaClient } from 'https://unpkg.com/@sekha-ai/sdk';
+    // Use from CDN (when published)
+    import { SekhaClient } from 'https://unpkg.com/@sekha/sdk';
     
     const sekha = new SekhaClient({
       controllerURL: 'http://localhost:8080',
-      apiKey: 'your-api-key'
+      apiKey: 'sk-your-api-key'
     });
     
     const response = await sekha.controller.query('search query');
@@ -594,34 +597,41 @@ do {
 ## 🧪 Development
 
 ```bash
+# Clone repository
+git clone https://github.com/sekha-ai/sekha-js-sdk.git
+cd sekha-js-sdk
+
 # Install dependencies
 npm install
 
-# Build
+# Build (ESM + CJS)
 npm run build
 
-# Test
+# Build with watch mode
+npm run build:watch
+
+# Run tests
 npm test
 
-# Test with coverage
+# Run tests with coverage
 npm run test:coverage
 
-# Type check
-npm run typecheck
+# Run tests with UI
+npm run test:ui
+
+# Run tests in watch mode
+npm run test:watch
 
 # Lint
 npm run lint
 
-# Format
-npm run format
-
-# Generate docs
-npm run docs
+# Fix lint issues
+npm run lint:fix
 ```
 
 ---
 
-## 📦 Package Structure
+## 📁 Package Structure
 
 ```
 sekha-js-sdk/
@@ -630,15 +640,38 @@ sekha-js-sdk/
 │   ├── mcp.ts          # MCPClient (MCP Protocol)
 │   ├── bridge.ts       # BridgeClient (LLM Bridge)
 │   ├── unified.ts      # SekhaClient (Unified)
-│   ├── types.ts        # All type definitions
+│   ├── types.ts        # All type definitions (50+)
 │   ├── errors.ts       # Error classes
 │   └── index.ts        # Public exports
 ├── tests/
 │   ├── client.test.ts
 │   ├── mcp.test.ts
 │   └── endpoints.test.ts
-└── dist/              # Compiled output
+├── dist/
+│   ├── esm/            # ES Module output
+│   └── cjs/            # CommonJS output
+├── package.json
+├── tsconfig.json       # TypeScript config (ESM)
+└── tsconfig.cjs.json   # TypeScript config (CJS)
 ```
+
+---
+
+## 🗺️ Roadmap
+
+- [x] MemoryController (REST API) - v0.1
+- [x] MCPClient (MCP Protocol) - v0.1
+- [x] BridgeClient (LLM Bridge) - v0.1
+- [x] SekhaClient (Unified Interface) - v0.1
+- [x] TypeScript support with 50+ types - v0.1
+- [x] Multi-modal message support - v0.1
+- [x] Streaming support - v0.1
+- [ ] Comprehensive test coverage - v0.2
+- [ ] npm package publication - v1.0
+- [ ] Browser optimizations
+- [ ] WebSocket support for real-time updates
+- [ ] Batch operations
+- [ ] Request caching layer
 
 ---
 
@@ -646,6 +679,7 @@ sekha-js-sdk/
 
 - **Main Repository:** [sekha-controller](https://github.com/sekha-ai/sekha-controller)
 - **LLM Bridge:** [sekha-llm-bridge](https://github.com/sekha-ai/sekha-llm-bridge)
+- **Python SDK:** [sekha-python-sdk](https://github.com/sekha-ai/sekha-python-sdk)
 - **Documentation:** [docs.sekha.dev](https://docs.sekha.dev)
 - **Website:** [sekha.dev](https://sekha.dev)
 - **Discord:** [discord.gg/sekha](https://discord.gg/gZb7U9deKH)
@@ -660,15 +694,32 @@ AGPL-3.0 - See [LICENSE](LICENSE) for details.
 
 ---
 
-## 🙏 Contributing
+## 🔧 Tech Stack
+
+- **TypeScript 5.9+** - Type-safe development
+- **Vitest** - Fast unit testing
+- **ESLint** - Code quality
+- **Zero Dependencies** - Lightweight and secure
+
+---
+
+## 🤝 Contributing
 
 Contributions welcome! Please see our [Contributing Guide](CONTRIBUTING.md).
 
 1. Fork the repository
-2. Create a feature branch
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
 3. Make your changes
 4. Add tests
-5. Submit a pull request
+5. Run linter (`npm run lint:fix`)
+6. Commit your changes (`git commit -m 'Add amazing feature'`)
+7. Push to the branch (`git push origin feature/amazing-feature`)
+8. Open a Pull Request
+
+Please ensure:
+- All tests pass (`npm test`)
+- Code is formatted (`npm run lint:fix`)
+- TypeScript compiles without errors (`npm run build`)
 
 ---
 
