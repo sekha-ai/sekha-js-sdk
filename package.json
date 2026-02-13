@@ -1,6 +1,6 @@
 {
   "name": "@sekha/sdk",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "description": "JavaScript/TypeScript SDK for Sekha AI Memory Controller",
   "main": "dist/cjs/index.js",
