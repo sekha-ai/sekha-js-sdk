@@ -6,6 +6,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9%2B-blue.svg)](https://www.typescriptlang.org)
 [![npm](https://img.shields.io/badge/npm-coming--soon-orange.svg)](https://www.npmjs.com)
 [![CI](https://github.com/sekha-ai/sekha-js-sdk/actions/workflows/ci.yml/badge.svg)](https://github.com/sekha-ai/sekha-js-sdk/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/sekha-ai/sekha-js-sdk/branch/main/graph/badge.svg)](https://codecov.io/gh/sekha-ai/sekha-js-sdk)
 
 ---
 
@@ -659,15 +660,17 @@ sekha-js-sdk/
 
 ## 🗺️ Roadmap
 
-- [x] MemoryController (REST API) - v0.1
-- [x] MCPClient (MCP Protocol) - v0.1
-- [x] BridgeClient (LLM Bridge) - v0.1
-- [x] SekhaClient (Unified Interface) - v0.1
-- [x] TypeScript support with 50+ types - v0.1
-- [x] Multi-modal message support - v0.1
-- [x] Streaming support - v0.1
-- [ ] Comprehensive test coverage - v0.2
-- [ ] npm package publication - v1.0
+- [x] MemoryController (REST API) - v0.1.0
+- [x] MCPClient (MCP Protocol) - v0.1.0
+- [x] BridgeClient (LLM Bridge) - v0.1.0
+- [x] SekhaClient (Unified Interface) - v0.1.0
+- [x] TypeScript support with 50+ types - v0.1.0
+- [x] Multi-modal message support - v0.1.0
+- [x] Streaming support - v0.1.0
+- [x] Integration tests with controller - v0.2.0
+- [x] Fixed CI/CD pipeline - v0.2.0
+- [ ] Comprehensive unit test coverage - v0.3.0
+- [ ] npm package publication - v1.0.0
 - [ ] Browser optimizations
 - [ ] WebSocket support for real-time updates
 - [ ] Batch operations
