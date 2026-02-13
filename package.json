@@ -37,7 +37,8 @@
   "bugs": {
     "url": "https://github.com/sekha-ai/sekha-js-sdk/issues"
   },
-  "homepage": "https://github.com/sekha-ai/sekha-js-sdk#readme",
+  "homepage": "https://sekha.dev",
+  "documentation": "https://docs.sekha.dev",
   "devDependencies": {
     "@types/node": "^25.0.10",
     "@typescript-eslint/eslint-plugin": "^8.20.0",
