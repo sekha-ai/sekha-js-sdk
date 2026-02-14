@@ -2,7 +2,8 @@
   "name": "@sekha/sdk",
   "version": "0.2.0",
   "type": "module",
-  "description": "JavaScript/TypeScript SDK for Sekha AI Memory Controller",
+  "description": "Official JavaScript/TypeScript SDK for Sekha AI Memory System - Unified access to REST, MCP, and LLM Bridge APIs with full type safety",
+  "author": "Sekha AI <jeff@sekha-ai.dev>",
   "main": "dist/cjs/index.js",
   "module": "dist/esm/index.js",
   "types": "dist/esm/index.d.ts",
@@ -27,7 +28,22 @@
     "ai",
     "memory",
     "sekha",
-    "typescript"
+    "llm",
+    "rag",
+    "typescript",
+    "sdk",
+    "conversation",
+    "semantic-search",
+    "vector-search",
+    "embeddings",
+    "mcp",
+    "model-context-protocol",
+    "chatgpt",
+    "openai",
+    "anthropic",
+    "memory-management",
+    "context-assembly",
+    "multi-modal"
   ],
   "license": "AGPL-3.0",
   "repository": {
@@ -39,6 +55,11 @@
   },
   "homepage": "https://sekha.dev",
   "documentation": "https://docs.sekha.dev",
+  "changelog": "https://github.com/sekha-ai/sekha-js-sdk/blob/main/CHANGELOG.md",
+  "funding": {
+    "type": "github",
+    "url": "https://github.com/sponsors/sekha-ai"
+  },
   "devDependencies": {
     "@types/node": "^25.0.10",
     "@typescript-eslint/eslint-plugin": "^8.20.0",
