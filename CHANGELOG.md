@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] - 2026-02-12
+## [0.2.0] - 2026-02-13
 
 ### 🚨 BREAKING CHANGES
 
@@ -277,13 +277,13 @@ Added dedicated `MCPClient` class with 7 MCP tools:
 
 ### 🧪 Tests
 
-- Added `tests/endpoints.test.ts` with 100% coverage of new/fixed endpoints
-- Added `tests/mcp.test.ts` with 100% coverage of MCPClient
+- Added `tests/endpoints.test.ts` with coverage of new/fixed endpoints
+- Added `tests/mcp.test.ts` with MCPClient coverage
 - Updated `tests/client.test.ts` to match new API
-- All tests passing with new implementation
 - Added integration tests for complete workflows
 - Added comprehensive error handling tests
 - Added retry logic tests
+- 88% pass rate (137 tests, 121 passing)
 
 ---
 
@@ -300,12 +300,12 @@ Added dedicated `MCPClient` class with 7 MCP tools:
 - TypeScript support
 - Browser and Node.js compatibility
 
-[Unreleased]: https://github.com/sekha-ai/sekha-js-sdk/compare/v0.1.0...HEAD
+[0.2.0]: https://github.com/sekha-ai/sekha-js-sdk/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/sekha-ai/sekha-js-sdk/releases/tag/v0.1.0
 
 ---
 
-## Migration Guide: 0.1.0 → Unreleased
+## Migration Guide: 0.1.0 → 0.2.0
 
 ### Step 1: Choose Your Interface
 
