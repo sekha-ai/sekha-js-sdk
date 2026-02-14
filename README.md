@@ -3,6 +3,7 @@
 > **Official JavaScript & TypeScript Client for Sekha Memory System**
 
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
+[![Version](https://img.shields.io/badge/version-0.2.0-blue.svg)](https://github.com/sekha-ai/sekha-js-sdk/releases)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9%2B-blue.svg)](https://www.typescriptlang.org)
 [![npm](https://img.shields.io/badge/npm-coming--soon-orange.svg)](https://www.npmjs.com)
 [![CI](https://github.com/sekha-ai/sekha-js-sdk/actions/workflows/ci.yml/badge.svg)](https://github.com/sekha-ai/sekha-js-sdk/actions/workflows/ci.yml)
