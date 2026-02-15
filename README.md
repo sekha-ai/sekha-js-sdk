@@ -5,7 +5,7 @@
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 [![Version](https://img.shields.io/badge/version-0.2.0-blue.svg)](https://github.com/sekha-ai/sekha-js-sdk/releases)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9%2B-blue.svg)](https://www.typescriptlang.org)
-[![npm](https://img.shields.io/badge/npm-coming--soon-orange.svg)](https://www.npmjs.com)
+[![npm](https://img.shields.io/npm/v/@sekha/sdk.svg)](https://www.npmjs.com/package/@sekha/sdk)
 [![CI](https://github.com/sekha-ai/sekha-js-sdk/actions/workflows/ci.yml/badge.svg)](https://github.com/sekha-ai/sekha-js-sdk/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/sekha-ai/sekha-js-sdk/branch/main/graph/badge.svg)](https://codecov.io/gh/sekha-ai/sekha-js-sdk)
 
@@ -44,10 +44,10 @@ Official JavaScript/TypeScript client for the Sekha Memory System - providing pe
 ### Installation
 
 ```bash
-# From npm (coming soon)
+# From npm
 npm install @sekha/sdk
 
-# From source (current)
+# From source
 git clone https://github.com/sekha-ai/sekha-js-sdk.git
 cd sekha-js-sdk
 npm install
