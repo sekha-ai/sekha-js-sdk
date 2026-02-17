@@ -10,8 +10,8 @@ jobs:
     runs-on: ubuntu-latest
     
     permissions:
-      contents: write
-      id-token: write  # Required for npm provenance via trusted publishing
+      contents: write        # Required for creating GitHub releases
+      id-token: write        # Required for OIDC trusted publishing
     
     steps:
       - name: Checkout code
@@ -55,8 +55,9 @@ jobs:
           echo "✅ Version check passed: $PACKAGE_VERSION"
       
       - name: Publish to npm with trusted publishing
-        run: npm publish --access public --provenance
-        # No NODE_AUTH_TOKEN needed - uses OIDC via trusted publishing
+        run: npm publish --access public
+        # npm CLI automatically detects OIDC and uses it for authentication
+        # No NODE_AUTH_TOKEN needed - provenance is generated automatically
       
       - name: Extract changelog for version
         id: changelog
@@ -97,3 +98,5 @@ jobs:
           echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
           echo "npm install @sekha-ai/sdk@${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Published with **provenance** via trusted publishing" >> $GITHUB_STEP_SUMMARY
