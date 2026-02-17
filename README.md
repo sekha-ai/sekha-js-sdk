@@ -3,9 +3,9 @@
 > **Official JavaScript & TypeScript Client for Sekha Memory System**
 
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
-[![Version](https://img.shields.io/badge/version-0.2.0-blue.svg)](https://github.com/sekha-ai/sekha-js-sdk/releases)
+[![Version](https://img.shields.io/badge/version-0.1.9-blue.svg)](https://github.com/sekha-ai/sekha-js-sdk/releases)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9%2B-blue.svg)](https://www.typescriptlang.org)
-[![npm](https://img.shields.io/npm/v/@sekha/sdk.svg)](https://www.npmjs.com/package/@sekha/sdk)
+[![npm](https://img.shields.io/npm/v/@sekha-ai/sdk.svg)](https://www.npmjs.com/package/@sekha-ai/sdk)
 [![CI](https://github.com/sekha-ai/sekha-js-sdk/actions/workflows/ci.yml/badge.svg)](https://github.com/sekha-ai/sekha-js-sdk/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/sekha-ai/sekha-js-sdk/branch/main/graph/badge.svg)](https://codecov.io/gh/sekha-ai/sekha-js-sdk)
 
@@ -45,7 +45,7 @@ Official JavaScript/TypeScript client for the Sekha Memory System - providing pe
 
 ```bash
 # From npm
-npm install @sekha/sdk
+npm install @sekha-ai/sdk
 
 # From source
 git clone https://github.com/sekha-ai/sekha-js-sdk.git
@@ -57,7 +57,7 @@ npm run build
 ### Simple Usage - Unified Client (Recommended)
 
 ```typescript
-import { SekhaClient } from '@sekha/sdk';
+import { SekhaClient } from '@sekha-ai/sdk';
 
 // Initialize with all services
 const sekha = new SekhaClient({
@@ -78,7 +78,7 @@ console.log(response.choices[0].message.content);
 ### Advanced Usage - Individual Clients
 
 ```typescript
-import { MemoryController, MCPClient, BridgeClient } from '@sekha/sdk';
+import { MemoryController, MCPClient, BridgeClient } from '@sekha-ai/sdk';
 
 // REST API client
 const controller = new MemoryController({
@@ -114,7 +114,7 @@ const completion = await bridge.complete({
 Direct HTTP access to Sekha Controller for conversation management.
 
 ```typescript
-import { MemoryController } from '@sekha/sdk';
+import { MemoryController } from '@sekha-ai/sdk';
 
 const controller = new MemoryController({
   baseURL: 'http://localhost:8080',
@@ -174,7 +174,7 @@ await controller.pruneExecute({
 MCP protocol for standardized AI memory operations.
 
 ```typescript
-import { MCPClient } from '@sekha/sdk';
+import { MCPClient } from '@sekha-ai/sdk';
 
 const mcp = new MCPClient({
   baseURL: 'http://localhost:8080',
@@ -229,7 +229,7 @@ console.log(`Messages: ${stats.total_messages}`);
 Direct access to Sekha LLM Bridge for completions and embeddings.
 
 ```typescript
-import { BridgeClient } from '@sekha/sdk';
+import { BridgeClient } from '@sekha-ai/sdk';
 
 const bridge = new BridgeClient({
   baseURL: 'http://localhost:5001'
@@ -294,7 +294,7 @@ console.log(`Importance: ${score.score}/10`);
 Combines all three clients with high-level convenience methods.
 
 ```typescript
-import { SekhaClient } from '@sekha/sdk';
+import { SekhaClient } from '@sekha-ai/sdk';
 
 const sekha = new SekhaClient({
   controllerURL: 'http://localhost:8080',
@@ -365,7 +365,7 @@ console.log(`Bridge: ${health.bridge.status}`);
 ### Multi-Modal Messages (Text + Images)
 
 ```typescript
-import { Message } from '@sekha/sdk';
+import { Message } from '@sekha-ai/sdk';
 
 // Vision message with image
 const visionMessage: Message = {
@@ -404,7 +404,7 @@ import {
   extractImageUrls,
   hasImages,
   isValidStatus
-} from '@sekha/sdk';
+} from '@sekha-ai/sdk';
 
 const message: Message = { /* ... */ };
 
@@ -453,7 +453,7 @@ console.log('\nComplete response:', fullResponse);
 ### Error Handling
 
 ```typescript
-import { SekhaError } from '@sekha/sdk';
+import { SekhaError } from '@sekha-ai/sdk';
 
 try {
   const results = await controller.query('search');
@@ -580,7 +580,7 @@ do {
 <body>
   <script type="module">
     // Use from CDN (when published)
-    import { SekhaClient } from 'https://unpkg.com/@sekha/sdk';
+    import { SekhaClient } from 'https://unpkg.com/@sekha-ai/sdk';
     
     const sekha = new SekhaClient({
       controllerURL: 'http://localhost:8080',
