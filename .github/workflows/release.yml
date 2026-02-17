@@ -7,14 +7,11 @@ on:
 
 jobs:
   release:
-    # DISABLED: Remove 'if: false' line below when ready to enable releases
-    if: false
-    
     runs-on: ubuntu-latest
     
     permissions:
       contents: write
-      id-token: write  # Required for npm provenance
+      id-token: write  # Required for npm provenance via trusted publishing
     
     steps:
       - name: Checkout code
@@ -55,12 +52,11 @@ jobs:
             echo "Error: package.json version ($PACKAGE_VERSION) doesn't match tag ($TAG_VERSION)"
             exit 1
           fi
-          echo "Version check passed: $PACKAGE_VERSION"
+          echo "✅ Version check passed: $PACKAGE_VERSION"
       
-      - name: Publish to npm
+      - name: Publish to npm with trusted publishing
         run: npm publish --access public --provenance
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        # No NODE_AUTH_TOKEN needed - uses OIDC via trusted publishing
       
       - name: Extract changelog for version
         id: changelog
@@ -94,10 +90,10 @@ jobs:
           echo "### ✅ Release Published Successfully" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Version:** ${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Package:** [@sekha/sdk](https://www.npmjs.com/package/@sekha/sdk)" >> $GITHUB_STEP_SUMMARY
+          echo "**Package:** [@sekha-ai/sdk](https://www.npmjs.com/package/@sekha-ai/sdk)" >> $GITHUB_STEP_SUMMARY
           echo "**Release:** [GitHub Release](https://github.com/${{ github.repository }}/releases/tag/v${{ steps.version.outputs.version }})" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "#### Install" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
-          echo "npm install @sekha/sdk@${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "npm install @sekha-ai/sdk@${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
