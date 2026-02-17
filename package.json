@@ -1,6 +1,6 @@
 {
   "name": "@sekha-ai/sdk",
-  "version": "0.1.9",
+  "version": "0.2.0",
   "type": "module",
   "description": "Official JavaScript/TypeScript SDK for Sekha AI Memory System - Unified access to REST, MCP, and LLM Bridge APIs with full type safety",
   "author": "Sekha AI <jeff@sekha-ai.dev>",
