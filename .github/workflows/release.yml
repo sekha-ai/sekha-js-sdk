@@ -22,10 +22,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          # NOTE: Do NOT set registry-url here!
-          # It creates an .npmrc with NODE_AUTH_TOKEN which breaks OIDC.
-          # npm CLI will automatically detect OIDC in GitHub Actions.
+          node-version: '24'  # Requires 22.14.0+ for trusted publishing
+          registry-url: 'https://registry.npmjs.org'
       
       - name: Install dependencies
         run: npm ci
@@ -56,11 +54,9 @@ jobs:
           fi
           echo "✅ Version check passed: $PACKAGE_VERSION"
       
-      - name: Publish to npm with OIDC trusted publishing
-        run: npm publish --access public --provenance
-        # npm CLI automatically detects GitHub Actions OIDC environment
-        # with id-token: write permission and uses it for authentication.
-        # No .npmrc or NODE_AUTH_TOKEN needed!
+      - name: Publish to npm
+        run: npm publish
+        # npm CLI detects OIDC and automatically generates provenance
       
       - name: Extract changelog for version
         id: changelog
@@ -101,5 +97,3 @@ jobs:
           echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
           echo "npm install @sekha-ai/sdk@${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "✅ Published with **provenance attestation** via OIDC trusted publishing" >> $GITHUB_STEP_SUMMARY
